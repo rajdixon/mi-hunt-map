@@ -84,6 +84,19 @@ const OVERLAYS = [
     layers: [{ type: "line", paint: { "line-color": "#1d1d1d", "line-width": 1.6, "line-opacity": 0.7 } }],
     info: null },
 
+  // Private land owners from county tax parcels, where the county publishes
+  // them openly. One toggle for all counties; each county is its own source.
+  { id: "parcels-kzoo", name: "Private land owners", group: "parcels", minzoom: 14,
+    note: "Tax parcels with owner names: Kalamazoo County so far",
+    url: "https://services3.arcgis.com/RGltUbqpl4h9E3Qh/arcgis/rest/services/Parcels_2025_view/FeatureServer/11",
+    fields: ["PELNUMBER", "ONERNAME1", "ONERNAME2", "PCOMBINED", "PRTYCLSTXT", "Acres", "GOVUNIT", "BSAlink"],
+    layers: [
+      { type: "fill", paint: { "fill-color": "#f2c14e", "fill-opacity": 0.06 } },
+      { type: "line", paint: { "line-color": "#f2c14e", "line-width": ["interpolate", ["linear"], ["zoom"], 14, 0.8, 18, 2] } }],
+    info: p => ({ kind: "Private parcel · Kalamazoo County 2025", title: [p.ONERNAME1, p.ONERNAME2].filter(Boolean).join(" / ") || "Owner not listed",
+      rows: [["Acres", p.Acres], ["Address", p.PCOMBINED], ["Class", p.PRTYCLSTXT], ["Township", p.GOVUNIT], ["Parcel", p.PELNUMBER],
+             ["Tax record", p.BSAlink && linkEl("Open in BS&A", p.BSAlink)]] }) },
+
   { id: "dmus", name: "Deer management units", note: "2026 DMU boundaries", minzoom: 0, local: "data/dmu.geojson",
     layers: [
       { type: "fill", paint: { "fill-color": "#000", "fill-opacity": 0 } },
@@ -178,6 +191,12 @@ async function refreshOverlays() {
       if (e.name !== "AbortError") console.warn(`Overlay ${o.id} failed`, e);
     }
   }
+}
+
+function linkEl(text, href) {
+  const a = document.createElement("a");
+  a.textContent = text; a.href = href; a.target = "_blank"; a.rel = "noopener";
+  return a;
 }
 
 function contains(a, b) { return a[0] <= b[0] && a[1] <= b[1] && a[2] >= b[2] && a[3] >= b[3]; }
