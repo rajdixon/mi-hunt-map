@@ -340,3 +340,4 @@ body:has(.sheet:not([hidden])) .coords { opacity: 0; }
 .wx-pressure { font-size: 14px; font-weight: 600; }
 .wx-pressure[data-kind="front"], .od-pressure[data-kind="front"] { color: #9cc4ff; }
 .od-pressure { font-size: 12px; font-weight: 700; color: var(--ink-dim); }
+.wx-meaning { color: var(--ink-dim); margin-top: -2px !important; }

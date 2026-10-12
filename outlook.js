@@ -137,7 +137,7 @@ function fillWeather(wx, fc, iso, h, tz, fmt) {
   if (dp) {
     const pe = el("div", "wx-pressure", dayPressureText(dp, fmt));
     pe.dataset.kind = dp.kind;
-    wx.append(pe);
+    wx.append(pe, el("p", "fine wx-meaning", PRESSURE_MEANING[dp.kind]));
   }
   const line = (label, p, min) => {
     if (!p) return null;

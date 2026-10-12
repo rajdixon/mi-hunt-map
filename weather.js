@@ -93,6 +93,13 @@ function dayPressureText(dp, fmt) {
   if (dp.kind === "steady") return `Pressure steady near ${dp.start.toFixed(2)} in`;
   return `Pressure ${dp.kind}${dp.fast ? " fast" : ""} (${sign(dp.change)} in over the day)`;
 }
+// What each kind of day usually means, in plain words
+const PRESSURE_MEANING = {
+  rising:  "Rising pressure usually means a front has passed and the weather is clearing, often with colder air behind it. Deer tend to move more while pressure is changing, and the rising side after a front is a favourite time to hunt.",
+  falling: "Falling pressure means a storm or front is on the way. Deer tend to move more while pressure is changing, often feeding hard before bad weather, then bedding down once it arrives.",
+  steady:  "Steady pressure means settled weather with no front nearby. Deer usually move less than when pressure is rising or falling, sticking to their normal dawn and dusk routine.",
+  front:   "A front moves through: pressure falls as it arrives, bottoms out, then rises as it clears. Deer tend to move more on both sides of it, especially the clearing, often colder, side.",
+};
 const DAY_PRESSURE_ICON = { front: "↓↑", rising: "↑", falling: "↓", steady: "→" };
 
 // Group the NWS 12-hour periods into calendar days (in the forecast office's
