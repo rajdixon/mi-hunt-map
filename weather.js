@@ -12,7 +12,8 @@ const wxMem = new Map();
 function wxKey(lng, lat) { return `${(Math.round(lat * 20) / 20).toFixed(2)},${(Math.round(lng * 20) / 20).toFixed(2)}`; }
 
 // Resolves { periods: [{ t, end, dir, mph, temp, sky, pop }], days: [{ date, name, day, night }],
-// fetched, stale } or null. `days` comes from the 12-hour forecast and may be empty.
+// pressure, fetched, stale } or null. `days` comes from the 12-hour forecast and may be
+// empty; `pressure` (from Open-Meteo, since NWS has none) may be null.
 async function getForecast(lng, lat) {
   const key = wxKey(lng, lat);
   let fc = wxMem.get(key) || store.get("wx2:" + key, null);
@@ -21,16 +22,17 @@ async function getForecast(lng, lat) {
     const pt = await (await fetch(`https://api.weather.gov/points/${lat.toFixed(4)},${lng.toFixed(4)}`)).json();
     const url = pt.properties?.forecastHourly;
     if (!url) throw new Error("No forecast for this point");
-    const [hourly, daily] = await Promise.all([
+    const [hourly, daily, pressure] = await Promise.all([
       fetch(url).then(r => r.json()),
       fetch(pt.properties.forecast).then(r => r.json()).catch(() => null),
+      getPressure(lng, lat).catch(() => null),
     ]);
     const periods = (hourly.properties?.periods || []).slice(0, 168).map(p => ({
       t: p.startTime, end: p.endTime, dir: p.windDirection, mph: parseInt(p.windSpeed, 10) || 0,
       temp: p.temperature, sky: p.shortForecast, pop: p.probabilityOfPrecipitation?.value ?? null,
     }));
     if (!periods.length) throw new Error("Empty forecast");
-    fc = { periods, days: dailyDays(daily), fetched: Date.now() };
+    fc = { periods, days: dailyDays(daily), pressure, fetched: Date.now() };
     wxMem.set(key, fc);
     store.set("wx2:" + key, fc);
     return fc;
@@ -38,6 +40,60 @@ async function getForecast(lng, lat) {
     return fc ? { ...fc, stale: true } : null;
   }
 }
+
+// ---------- Pressure ----------
+// Hourly sea-level pressure from Open-Meteo, from yesterday through the next
+// 8 days, as { t0, p: [inHg per hour] }
+async function getPressure(lng, lat) {
+  const url = "https://api.open-meteo.com/v1/forecast?" + new URLSearchParams({
+    latitude: lat.toFixed(3), longitude: lng.toFixed(3), hourly: "pressure_msl",
+    past_days: "1", forecast_days: "8", timeformat: "unixtime", timezone: "GMT" });
+  const h = (await (await fetch(url)).json()).hourly;
+  if (!h?.time?.length) throw new Error("No pressure data");
+  return { t0: h.time[0] * 1000, p: h.pressure_msl.map(v => v == null ? null : +(v * 0.02953).toFixed(2)) };
+}
+
+function pressureAt(fc, ms) {
+  const pr = fc?.pressure;
+  if (!pr) return null;
+  const i = Math.round((ms - pr.t0) / 3600000);
+  return pr.p[i] ?? null;
+}
+
+// Change over the 3 hours before `ms`: 0.06 in or more is a rapid change
+function pressureArrow(fc, ms) {
+  const a = pressureAt(fc, ms - 3 * 3600000), b = pressureAt(fc, ms);
+  if (a == null || b == null) return "";
+  const d = b - a;
+  return d >= 0.06 ? "⇈" : d >= 0.02 ? "↑" : d <= -0.06 ? "⇊" : d <= -0.02 ? "↓" : "→";
+}
+
+// What pressure does over a local day starting at `mid` (ms):
+// { kind: "front" | "rising" | "falling" | "steady", fast, change, low, lowAt, start }
+function dayPressure(fc, mid) {
+  const pts = [];
+  for (let i = 0; i <= 24; i++) {
+    const v = pressureAt(fc, mid + i * 3600000);
+    if (v != null) pts.push([mid + i * 3600000, v]);
+  }
+  if (pts.length < 20) return null;
+  const start = pts[0][1], end = pts.at(-1)[1];
+  const low = pts.reduce((m, x) => x[1] < m[1] ? x : m);
+  const change = +(end - start).toFixed(2);
+  if (low[1] <= start - 0.06 && low[1] <= end - 0.06)
+    return { kind: "front", change, low: low[1], lowAt: low[0], start };
+  const kind = Math.abs(change) < 0.04 ? "steady" : change > 0 ? "rising" : "falling";
+  return { kind, fast: Math.abs(change) >= 0.15, change, start };
+}
+
+function dayPressureText(dp, fmt) {
+  if (!dp) return "";
+  const sign = n => (n > 0 ? "+" : "") + n.toFixed(2);
+  if (dp.kind === "front") return `Front passes: pressure bottoms out at ${dp.low.toFixed(2)} in around ${fmt(dp.lowAt)}, then rises`;
+  if (dp.kind === "steady") return `Pressure steady near ${dp.start.toFixed(2)} in`;
+  return `Pressure ${dp.kind}${dp.fast ? " fast" : ""} (${sign(dp.change)} in over the day)`;
+}
+const DAY_PRESSURE_ICON = { front: "↓↑", rising: "↑", falling: "↓", steady: "→" };
 
 // Group the NWS 12-hour periods into calendar days (in the forecast office's
 // time zone, which the timestamps carry): the daytime high and that night's low

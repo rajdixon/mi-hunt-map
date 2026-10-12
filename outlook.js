@@ -98,7 +98,7 @@ function renderOutlook(sec, place, iso, pt) {
   const note = el("p", "fine",
     "Solunar times are a hunting tradition, not proven science: GPS-collar studies (Penn State, NC State, King Ranch) " +
     "found moon phase made little difference to deer movement. Temperature was the most consistent predictor, " +
-    "so look for days marked as cold snaps.");
+    "so look for days marked as cold snaps. Pressure findings are mixed; a front passing (↓↑) usually brings the cold snap.");
   sec.append(wx, moon, solP, strip, note);
   drawStrip(strip, null, place, iso);
 
@@ -133,16 +133,28 @@ function fillWeather(wx, fc, iso, h, tz, fmt) {
     const drop = frontDrop(fc.days, iso);
     if (drop) wx.append(el("div", "wx-front", `Cold snap: high ${drop}° cooler than the day before`));
   }
-  const line = (label, p) => p && el("div", "wx-hunt",
-    `${label}: ${p.temp}°, ${windText(p)}${p.pop ? `, ${p.pop}% rain` : ""}`);
-  const rows = [line(`First light (${fmtMin(h.open)})`, first), line(`Last hour (${fmtMin(h.close - 60)})`, lastH)].filter(Boolean);
+  const dp = dayPressure(fc, mid);
+  if (dp) {
+    const pe = el("div", "wx-pressure", dayPressureText(dp, fmt));
+    pe.dataset.kind = dp.kind;
+    wx.append(pe);
+  }
+  const line = (label, p, min) => {
+    if (!p) return null;
+    const ms = mid + min * 60000, pr = pressureAt(fc, ms);
+    return el("div", "wx-hunt", `${label}: ${p.temp}°, ${windText(p)}${p.pop ? `, ${p.pop}% rain` : ""}` +
+      (pr != null ? `, ${pr.toFixed(2)} in ${pressureArrow(fc, ms)}` : ""));
+  };
+  const rows = [line(`First light (${fmtMin(h.open)})`, first, h?.open + 15),
+                line(`Last hour (${fmtMin(h.close - 60)})`, lastH, h?.close - 45)].filter(Boolean);
   if (rows.length) wx.append(...rows);
   if (d?.day?.text) wx.append(el("p", "fine wx-detail", d.day.text));
   else if (d?.night?.text) wx.append(el("p", "fine wx-detail", `Tonight: ${d.night.text}`));
-  wx.append(el("p", "fine", `NWS forecast · ${ageText(fc)}${fc.stale ? " (no signal)" : ""}`));
+  wx.append(el("p", "fine", `NWS forecast${fc.pressure ? ", pressure from Open-Meteo" : ""} · ${ageText(fc)}${fc.stale ? " (no signal)" : ""}` +
+    (fc.pressure ? ". Arrows show the last 3 hours: ⇈/⇊ is a rapid change (0.06 in or more)." : "")));
 }
 
-// Seven days from today: moon, high/low and cold snaps. Tap a day to pick it.
+// Seven days from today: moon, high/low, cold snaps and pressure. Tap a day to pick it.
 function drawStrip(strip, fc, place, iso) {
   strip.replaceChildren();
   const today = nowIn(place.tz).iso;
@@ -158,6 +170,13 @@ function drawStrip(strip, fc, place, iso) {
              el("span", "od-temp", f ? [f.day?.temp, f.night?.temp].map(t => t == null ? "–" : `${t}°`).join(" ") : "–"));
     const drop = fc ? frontDrop(fc.days, d) : 0;
     if (drop) b.append(el("span", "od-front", `▼${drop}°`));
+    const dp = fc && dayPressure(fc, tzMidnight(d, place.tz));
+    if (dp) {
+      const s = el("span", "od-pressure", DAY_PRESSURE_ICON[dp.kind]);
+      s.dataset.kind = dp.kind;
+      s.title = dayPressureText(dp, fmtIn(place.tz));
+      b.append(s);
+    }
     b.onclick = () => { rules.date = d; renderRules(); };
     strip.append(b);
   }
