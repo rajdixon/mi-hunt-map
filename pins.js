@@ -1,5 +1,5 @@
 "use strict";
-// Personal pins (stands, blinds, camp...) with good-wind settings and a hunt
+// Personal pins (stands, blinds, camp, trail cams, rubs, scrapes...) with good-wind settings and a hunt
 // log. Stored only in this browser's localStorage; nothing is uploaded.
 // Backup: GPX (pins only, opens in other apps) or JSON (everything).
 
@@ -10,6 +10,12 @@ const PIN_TYPES = {
              svg: '<path d="M3 20 12 5l9 15Z" fill="none"/><path d="M9.5 14h5" fill="none"/>' },
   camp:    { label: "Camp", color: "#3d8bff",
              svg: '<path d="M3 11 12 4l9 7M5.5 9.5V20h13V9.5" fill="none"/><path d="M10 20v-5h4v5" fill="none"/>' },
+  cam:     { label: "Trail cam", color: "#1f9e8f",
+             svg: '<rect x="6" y="3.5" width="12" height="17" rx="2.5" fill="none"/><circle cx="12" cy="10.5" r="3" fill="none"/><path d="M10 16.5h4" fill="none"/>' },
+  rub:     { label: "Buck rub", color: "#a8662e", sign: true,
+             svg: '<path d="M8 2.5v19M16 2.5v19" fill="none"/><path d="m10.5 8 3 1.5-3 1.5 3 1.5-3 1.5 3 1.5" fill="none"/>' },
+  scrape:  { label: "Buck scrape", color: "#8a55d6", sign: true,
+             svg: '<path d="M9.8 4C7.4 7.2 6.9 11.6 8 15.4c.6 1.9 2.4 1.6 2.6-.2l.1-10.4c0-1-.4-1.2-.9-.8Z"/><path d="M14.2 4c2.4 3.2 2.9 7.6 1.8 11.4-.6 1.9-2.4 1.6-2.6-.2l-.1-10.4c0-1 .4-1.2.9-.8Z"/><path d="M4 20.5h16" fill="none"/>' },
   parking: { label: "Parking", color: "#8f9aa6",
              svg: '<path d="M8 20V4h5a4 4 0 0 1 0 8H8" fill="none"/>' },
   other:   { label: "Other", color: "#e5534b",
@@ -140,6 +146,7 @@ function openPinEditor(pin, { shared = false } = {}) {
     b.append(pinDot(k), el("span", null, t.label));
     b.addEventListener("click", () => {
       editing.type = k;
+      $("pin-wind-field").hidden = !!t.sign;
       types.querySelectorAll(".pin-type").forEach(x => x.setAttribute("aria-checked", String(x === b)));
     });
     types.append(b);
@@ -157,6 +164,7 @@ function openPinEditor(pin, { shared = false } = {}) {
     winds.append(b);
   }
   renderGoodWindows();
+  $("pin-wind-field").hidden = !!PIN_TYPES[editing.type]?.sign;
 
   $("pin-name").value = editing.name;
   $("pin-notes").value = editing.notes;
