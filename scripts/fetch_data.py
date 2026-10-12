@@ -7,6 +7,7 @@ Run from the repo root:  python3 scripts/fetch_data.py
 import datetime
 import json
 import pathlib
+import sys
 import urllib.parse
 import urllib.request
 
@@ -46,7 +47,7 @@ def fetch(title, fields, extra):
         "spatialRel": "esriSpatialRelIntersects",
         "maxAllowableOffset": OFFSET, "geometryPrecision": 5,
     }
-    ids = get(url, {**base, "returnIdsOnly": "true", "f": "json"})["objectIds"] or []
+    ids = sorted(get(url, {**base, "returnIdsOnly": "true", "f": "json"})["objectIds"] or [])
     # Coded-value fields (e.g. state forest County/UnitName) come back as ints
     meta = get(url[:-len("/query")], {"f": "json"})
     domains = {f["name"]: {c["code"]: c["name"] for c in f["domain"]["codedValues"]}
@@ -68,9 +69,14 @@ def fetch(title, fields, extra):
 
 
 if __name__ == "__main__":
-    (ROOT / "data" / "meta.json").write_text(json.dumps({"updated": datetime.date.today().isoformat()}))
     for name, (title, fields, extra) in SOURCES.items():
         fc = fetch(title, fields, extra)
         path = ROOT / "data" / f"{name}.geojson"
+        # Refuse to overwrite good data with a partial download (service outage, filter change)
+        if path.exists():
+            before = len(json.loads(path.read_text())["features"])
+            if len(fc["features"]) < before * 0.8:
+                sys.exit(f"{name}: got {len(fc['features'])} features, had {before}. Not overwriting.")
         path.write_text(json.dumps(fc, separators=(",", ":")))
         print(f"{name:18} {len(fc['features']):6} features  {path.stat().st_size / 1e6:6.1f} MB")
+    (ROOT / "data" / "meta.json").write_text(json.dumps({"updated": datetime.date.today().isoformat()}))

@@ -105,6 +105,11 @@ map.on("load", async () => {
                    paint: { "line-color": l.color, "line-width": ["interpolate", ["linear"], ["zoom"], 6, 0.4, 12, 1.5, 15, 2.5] } });
   }
 
+  // Saved offline areas
+  map.addSource("areas", { type: "geojson", data: areasGeoJSON() });
+  map.addLayer({ id: "areas-line", type: "line", source: "areas",
+                 paint: { "line-color": "#ff6a13", "line-width": 1.5, "line-dasharray": [3, 2], "line-opacity": 0.8 } });
+
   // Selected parcel outline + user position
   map.addSource("sel", { type: "geojson", data: empty() });
   map.addLayer({ id: "sel-line", type: "line", source: "sel",
@@ -268,6 +273,11 @@ function closeSheet(id) { $(id).hidden = true; liftButtons(); }
 
 $("btn-layers").addEventListener("click", () =>
   $("sheet-layers").hidden ? openSheet("sheet-layers") : closeSheet("sheet-layers"));
+$("btn-offline").addEventListener("click", () => {
+  if (!$("sheet-offline").hidden) return closeSheet("sheet-offline");
+  renderOffline();
+  openSheet("sheet-offline");
+});
 document.querySelectorAll("[data-close]").forEach(b =>
   b.addEventListener("click", () => {
     closeSheet(b.dataset.close);
@@ -297,7 +307,183 @@ function buildLayerList() {
   }
 }
 
+// ---------- Offline areas ----------
+// Saved tiles live in their own cache, which the service worker checks
+// before the network and never trims.
+const OFFLINE_CACHE = "offline-tiles-v1";
+const SAVE_MIN_Z = 8, SAVE_MAX_Z = 16, SAVE_LIMIT = 6000, AVG_TILE_KB = 20;
+let areas = store.get("areas", []);
+let saving = null;   // AbortController while a save runs
+
+function lng2x(lng, z) { return Math.floor((lng + 180) / 360 * 2 ** z); }
+function lat2y(lat, z) {
+  const r = lat * Math.PI / 180;
+  return Math.floor((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * 2 ** z);
+}
+
+function tileUrls(bounds, basemapName) {
+  const [w, s, e, n] = bounds, urls = [];
+  for (let z = SAVE_MIN_Z; z <= SAVE_MAX_Z; z++) {
+    const x0 = lng2x(w, z), x1 = lng2x(e, z), y0 = lat2y(n, z), y1 = lat2y(s, z);
+    for (let x = x0; x <= x1; x++) for (let y = y0; y <= y1; y++)
+      for (const t of BASEMAPS[basemapName])
+        urls.push(t.url.replace("{z}", z).replace("{x}", x).replace("{y}", y));
+  }
+  return urls;
+}
+
+function viewBounds() {
+  const b = map.getBounds();
+  return [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()].map(v => +v.toFixed(5));
+}
+
+function areasGeoJSON() {
+  return { type: "FeatureCollection", features: areas.map(a => {
+    const [w, s, e, n] = a.bounds;
+    return { type: "Feature", properties: { id: a.id },
+             geometry: { type: "Polygon", coordinates: [[[w, s], [e, s], [e, n], [w, n], [w, s]]] } };
+  }) };
+}
+
+function saveAreas() {
+  store.set("areas", areas);
+  map.getSource("areas")?.setData(areasGeoJSON());
+}
+
+function mb(tiles) { return Math.max(1, Math.round(tiles * AVG_TILE_KB / 1024)); }
+
+function renderEstimate() {
+  if (saving) return;
+  const n = tileUrls(viewBounds(), basemap).length;
+  const label = basemap === "sat" ? "Satellite" : "Topo";
+  const box = $("save-estimate");
+  if (n > SAVE_LIMIT) {
+    box.className = "save-estimate warn";
+    box.innerHTML = `<strong>Area too large</strong>Zoom in to save. This view needs ${n.toLocaleString()} tiles; the limit is ${SAVE_LIMIT.toLocaleString()}.`;
+  } else {
+    box.className = "save-estimate";
+    box.innerHTML = `<strong>About ${mb(n)} MB</strong>${n.toLocaleString()} ${label} tiles, zoom levels ${SAVE_MIN_Z}–${SAVE_MAX_Z}`;
+  }
+  $("btn-save").disabled = n > SAVE_LIMIT || !navigator.onLine;
+  if (!navigator.onLine) $("btn-save").textContent = "Connect to save";
+  else $("btn-save").textContent = "Save this area";
+}
+
+function renderOffline() {
+  renderEstimate();
+  const ul = $("area-list"); ul.replaceChildren();
+  $("area-empty").hidden = areas.length > 0;
+  for (const a of areas) {
+    const li = document.createElement("li");
+    const main = document.createElement("button");
+    main.className = "area-main";
+    main.innerHTML = `<span class="area-name"></span><span class="area-meta"></span>`;
+    main.querySelector(".area-name").textContent = a.name;
+    main.querySelector(".area-meta").textContent =
+      `${a.basemap === "sat" ? "Satellite" : "Topo"} · ${a.saved.toLocaleString()} tiles · ~${mb(a.saved)} MB · ${a.date}`;
+    main.addEventListener("click", () => {
+      closeSheet("sheet-offline");
+      map.fitBounds([[a.bounds[0], a.bounds[1]], [a.bounds[2], a.bounds[3]]], { padding: 20 });
+    });
+    const del = document.createElement("button");
+    del.className = "area-del"; del.textContent = "Delete";
+    // Two taps to delete: the viewer can't show confirm() dialogs reliably on phones
+    del.addEventListener("click", () => {
+      if (!del.classList.contains("confirm")) { del.classList.add("confirm"); del.textContent = "Tap to confirm"; return; }
+      deleteArea(a.id);
+    });
+    li.append(main, del);
+    ul.append(li);
+  }
+  storageNote();
+}
+
+async function storageNote() {
+  try {
+    const { usage, quota } = await navigator.storage.estimate();
+    $("storage-note").textContent = `Using ${Math.round(usage / 1048576)} MB of ${Math.round(quota / 1048576).toLocaleString()} MB available on this device.`;
+  } catch { $("storage-note").textContent = ""; }
+}
+
+map.on("moveend", () => { if (!$("sheet-offline").hidden) renderEstimate(); });
+addEventListener("online", renderEstimate);
+addEventListener("offline", renderEstimate);
+
+$("btn-save").addEventListener("click", async () => {
+  const bounds = viewBounds(), urls = tileUrls(bounds, basemap);
+  if (urls.length > SAVE_LIMIT) return;
+  try { await navigator.storage?.persist?.(); } catch {}
+  const cache = await caches.open(OFFLINE_CACHE);
+  saving = new AbortController();
+  $("btn-save").hidden = true; $("btn-cancel").hidden = false;
+  $("save-progress").hidden = false;
+
+  let done = 0, failed = 0, next = 0;
+  const box = $("save-estimate");
+  const update = () => {
+    $("save-bar").style.width = `${(done / urls.length) * 100}%`;
+    box.className = "save-estimate";
+    box.innerHTML = `<strong>Saving… ${Math.round(done / urls.length * 100)}%</strong>${done.toLocaleString()} of ${urls.length.toLocaleString()} tiles`;
+  };
+  update();
+  const worker = async () => {
+    while (next < urls.length && !saving.signal.aborted) {
+      const url = urls[next++];
+      try {
+        if (!(await cache.match(url))) {
+          const res = await fetch(url, { cache: "no-store", signal: saving.signal });
+          if (res.ok) await cache.put(url, res); else failed++;
+        }
+      } catch { if (!saving.signal.aborted) failed++; }
+      done++;
+      if (done % 20 === 0 || done === urls.length) update();
+    }
+  };
+  await Promise.all(Array.from({ length: 6 }, worker));
+
+  const cancelled = saving.signal.aborted;
+  saving = null;
+  $("btn-save").hidden = false; $("btn-cancel").hidden = true; $("save-progress").hidden = true;
+  if (cancelled) { renderOffline(); return; }
+
+  const c = [(bounds[0] + bounds[2]) / 2, (bounds[1] + bounds[3]) / 2];
+  const hit = hitsAt(c, false)[0];
+  areas.unshift({
+    id: Date.now().toString(36), bounds, basemap,
+    name: hit ? `Near ${hit.layer.title(hit.feature.properties || {})}` : `Area at ${c[1].toFixed(3)}, ${c[0].toFixed(3)}`,
+    saved: urls.length - failed,
+    date: new Date().toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }),
+  });
+  saveAreas();
+  renderOffline();
+  if (failed) {
+    box.className = "save-estimate warn";
+    box.innerHTML = `<strong>Saved with gaps</strong>${failed.toLocaleString()} tiles didn't download. Save again with a better connection to fill them in.`;
+  } else {
+    box.className = "save-estimate";
+    box.innerHTML = `<strong>Saved</strong>This area's map now works with no signal.`;
+  }
+});
+
+$("btn-cancel").addEventListener("click", () => saving?.abort());
+
+async function deleteArea(id) {
+  const area = areas.find(a => a.id === id);
+  areas = areas.filter(a => a.id !== id);
+  saveAreas();
+  // Keep tiles that another saved area still covers
+  const keep = new Set(areas.flatMap(a => tileUrls(a.bounds, a.basemap)));
+  const cache = await caches.open(OFFLINE_CACHE);
+  await Promise.all(tileUrls(area.bounds, area.basemap).filter(u => !keep.has(u)).map(u => cache.delete(u)));
+  renderOffline();
+}
+
 // ---------- Offline shell ----------
 if ("serviceWorker" in navigator && location.protocol !== "file:") {
+  // When a new version (e.g. a weekly data refresh) takes over, reload once to show it
+  const hadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (hadController && !saving) location.reload();
+  });
   navigator.serviceWorker.register("sw.js").catch(() => {});
 }

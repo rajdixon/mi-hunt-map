@@ -1,0 +1,36 @@
+name: Refresh DNR data
+
+# DNR land layers update about weekly. Re-download them every Monday and
+# publish only when the boundaries actually changed.
+on:
+  schedule:
+    - cron: "0 10 * * 1"   # Mondays, 6am Eastern
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Download layers
+        run: python3 scripts/fetch_data.py
+      - name: Publish if boundaries changed
+        run: |
+          if git diff --quiet -- 'data/*.geojson'; then
+            echo "No boundary changes."
+            exit 0
+          fi
+          git diff --stat -- 'data/*.geojson'
+          # New service worker version makes phones pick up the new data
+          sed -i -E "s/^const VERSION = \".*\";/const VERSION = \"data-$(date -u +%Y%m%d%H%M)\";/" sw.js
+          git config user.name "github-actions[bot]"
+          git config user.email "41898699+github-actions[bot]@users.noreply.github.com"
+          git add data sw.js
+          git commit -m "Refresh DNR land data $(date -u +%F)"
+          git push

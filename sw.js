@@ -1,7 +1,7 @@
 // App shell + land data: cache-first, so the map works with no signal.
-// Basemap tiles: cached as you browse (up to MAX_TILES), so areas you've
-// looked at while online stay visible offline.
-const VERSION = "v1-2026-10-09";
+// Basemap tiles: areas saved from the Offline maps sheet (never trimmed),
+// plus tiles cached as you browse (up to MAX_TILES).
+const VERSION = "v2-2026-10-12";
 const SHELL = `shell-${VERSION}`;
 const TILES = "tiles-v1";
 const MAX_TILES = 4000;
@@ -29,6 +29,8 @@ self.addEventListener("fetch", e => {
   if (e.request.method !== "GET") return;
 
   if (url.hostname === "server.arcgisonline.com") {
+    // The page's "Save this area" downloads write their own cache
+    if (e.request.cache === "no-store") return;
     e.respondWith(tile(e.request));
     return;
   }
@@ -44,9 +46,10 @@ self.addEventListener("fetch", e => {
 });
 
 async function tile(req) {
-  const cache = await caches.open(TILES);
-  const hit = await cache.match(req);
+  // Saved offline areas first, then tiles cached while browsing
+  const hit = await caches.match(req.url);
   if (hit) return hit;
+  const cache = await caches.open(TILES);
   try {
     const res = await fetch(req);
     if (res.ok || res.type === "opaque") {

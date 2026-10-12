@@ -33,6 +33,9 @@
   <button id="btn-locate" class="fab" aria-label="Show my location" title="My location">
     <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8" fill="none"/></svg>
   </button>
+  <button id="btn-offline" class="fab" aria-label="Offline maps" title="Offline maps">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5" fill="none"/><path d="M4 19h16" fill="none"/></svg>
+  </button>
   <button id="btn-layers" class="fab" aria-label="Layers and basemap" title="Layers">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2 8l10 5 10-5-10-5Z"/><path d="m2 13 10 5 10-5" fill="none"/><path d="m2 17.5 10 5 10-5" fill="none" opacity=".6"/></svg>
   </button>
@@ -53,6 +56,27 @@
     <button id="bm-sat" role="radio" data-basemap="sat" aria-checked="false">Satellite</button>
   </div>
   <p class="fine">Boundaries from Michigan DNR open data, filtered the same way as the DNR's MiHunt map. Data as of <span id="data-date"></span>. Safety zones (450 ft around occupied buildings), posted closures and local ordinances are not shown. Check the <a href="https://www.michigan.gov/mihunt" target="_blank" rel="noopener">official MiHunt map</a> and the current Hunting Digest before you hunt.</p>
+</section>
+
+<section id="sheet-offline" class="sheet" hidden aria-label="Offline maps">
+  <div class="sheet-grip" aria-hidden="true"></div>
+  <div class="sheet-head">
+    <h2>Offline maps</h2>
+    <button class="sheet-close" data-close="sheet-offline" aria-label="Close">×</button>
+  </div>
+  <p class="fine lead">Land boundaries already work with no signal. Save the background map for the area on screen before you lose service.</p>
+  <div class="save-box">
+    <div id="save-estimate" class="save-estimate"></div>
+    <div id="save-progress" class="progress" hidden><div id="save-bar" class="progress-bar"></div></div>
+    <div class="save-actions">
+      <button id="btn-save" class="btn-primary">Save this area</button>
+      <button id="btn-cancel" class="btn-ghost" hidden>Cancel</button>
+    </div>
+  </div>
+  <h3 class="sheet-sub">Saved areas</h3>
+  <ul id="area-list" class="area-list"></ul>
+  <p id="area-empty" class="fine">No saved areas yet.</p>
+  <p id="storage-note" class="fine"></p>
 </section>
 
 <section id="sheet-info" class="sheet" hidden aria-label="Parcel details">
