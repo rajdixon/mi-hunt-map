@@ -366,7 +366,7 @@ body:has(.sheet:not([hidden])) .coords { opacity: 0; }
 .measure-actions button { padding: 9px 0; }
 
 /* Sync (sync.js) */
-.sync-status { margin: 10px 0 0; font-size: 13px; color: var(--ink-dim); }
+.sync-status { margin: 4px 0 0; font-size: 13px; color: var(--ink-dim); }
 .sync-status[data-state="ok"]::before { content: "● "; color: var(--ok); }
 .sync-status[data-state="wait"]::before { content: "● "; color: #d4a63a; }
 .sync-status[data-state="login"] { color: #ff8a80; }

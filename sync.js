@@ -10,7 +10,7 @@
 // a login.
 
 const HOME = "https://hunt.tradersedges.net/";
-const MOVED = false;   // turn on once the server address is live
+const MOVED = true;    // the public copy points people to the server
 const onPublicCopy = location.hostname.endsWith("github.io");
 let syncOn = false, syncBusy = false, syncAgain = false, syncTimer = null, applying = false;
 let syncState = { at: store.get("sync:at", 0), msg: "" };
