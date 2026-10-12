@@ -1,0 +1,182 @@
+{
+ "US Forest Service - Huntable": {
+  "url": "https://services5.arcgis.com/7weheFjxuNkGGiZi/arcgis/rest/services/USA_Federal_Lands_2025/FeatureServer/0",
+  "where": "Agency IN ('Forest Service')"
+ },
+ "US Fish and Wildlife - Huntable": {
+  "url": "https://services.arcgis.com/QVENGdaPbd4LUkLV/arcgis/rest/services/FWS_NWRS_HQ_PublicHuntUnits_view/FeatureServer/0",
+  "where": "Huntable <> 'No'"
+ },
+ "US National Park Service - Huntable": {
+  "url": "https://services1.arcgis.com/fBc8EJBxQRMcHlei/arcgis/rest/services/NPS_Fee_Boundary/FeatureServer/0",
+  "where": "UNIT_NAME IN ('Pictured Rocks National Lakeshore','Sleeping Bear Dunes National Lakeshore')"
+ },
+ "Commercial Forest - Huntable": {
+  "url": "https://services3.arcgis.com/Jdnp1TjADvSDxMAX/arcgis/rest/services/CommercialForestParcels_View/FeatureServer/0",
+  "where": "ParcelStatusText = 'Active'"
+ },
+ "DNR Forestry - Huntable": {
+  "url": "https://services3.arcgis.com/Jdnp1TjADvSDxMAX/arcgis/rest/services/Michigan_DNR_Public_Forest_Inventory_Data/FeatureServer/5",
+  "where": "ManagementType = 1 AND FCKey NOT IN ('11003','11011','11018','11022','11053','11057','11058','11060','11061','11080','12059','12100','12118','12156','32029','32037','32049','32204','32247','33046','41008','41077','41096','41108','41109','41116','41117','41118','41119','41120','41121','41123','41136','41166','42004','42005','42006','42018','42019','42020','42024','42026','42029','42038','42039','42043','42044','42067','42092','42104','42105','45020','45052','45053','45054','45055','45056','45057','45058','45101','45159','45161','45163','45175','45184','45188','52020','52023','52051','52056','52065','52066','52067','52068','52069','52070','52071','52072','52073','52074','52141','52144','52154','52186','53009','53030','53032','53033','53034','53035','53036','53038','53040','53052','53059','54003','54006','54007','54008','54039','54046','54055','54084','54088','54123','54125','54150','54175','54177','61004','61011','61014','61015','61020','61035','61038','61045','61047','61048','61051','61052','61055','61061','61108','61128','61129','61130','61132','61163','63002','63011','63026','63028','63045','63093','63112','63118','63119','63127','63132','63134','63141','71007','71080','72001','72009','72021','72063','72175','72180','72181','72182','72183','72184','72185','72186','72187','72200','72201','72202','72203','72204','72219','72220','72232','72235','72236','72238','72246','72247','72248','72250','72251','72267','72280','72283','72288','72289','72293','72298','72300','73018','73024','73026')"
+ },
+ "DNR Parks and Recreation - Huntable": {
+  "url": "https://services3.arcgis.com/Jdnp1TjADvSDxMAX/arcgis/rest/services/DNRBoundariesParksHuntableLandsOPENDATA/FeatureServer/2",
+  "where": "HuntTrap NOT LIKE '%Closed%'"
+ },
+ "DNR Parks and Recreation - Huntable (Boundaries)": {
+  "url": "https://services3.arcgis.com/Jdnp1TjADvSDxMAX/arcgis/rest/services/DNRBoundariesParksHuntableLandsOPENDATA/FeatureServer/2",
+  "where": "HuntTrap NOT LIKE '%Closed%'"
+ },
+ "DNR Wildlife - Huntable": {
+  "url": "https://services3.arcgis.com/Jdnp1TjADvSDxMAX/arcgis/rest/services/DNRWILDLandsOPENDATA/FeatureServer/2",
+  "where": "OfficialWLDProjectAreaName NOT IN ('Portage Marsh State Wildlife Management Area','(Bay City SP - middle day-use portion, adj. to Tobico Marsh Unit)','(Saginaw Contained Disposal Facility (special adj. area))','Addis Creek Flooding State Wildlife Management Area','Au Train Basin State Wildlife Management Area','Backus Creek State Game Area','Baraga Plains State Wildlife Management Area','Barker Creek Flooding State Wildilfe Management Area','Bear Creek Flooding State Wildlife Management Area','Bentley Marsh Flooding State Wildlife Management Area','Bill Rollo Memorial Grouse Enhanced Mgmt.Sys.(GEMS)(SWMA)','Black Creek Flooding State Wildlife Management Area','Blind Sucker River Flooding State Wildlife Management Area','Blomgren''s Marsh State Wildlife Management Area','Blue Bill Creek Grouse Enh.Mgmt.Sys.(GEMS) of USFS Ottawa Nat.For','Bluff Creek / US-10 / M-18 Floodings State Wildlife Management Area','Cannon Creek Flooding No. 1 State Wildlife Management Area','Cannon Creek Flooding No. 2 State Wildlife Management Area','Cedar River Grouse Enhanced Mgmt.Sys.(GEMS)(SWMA)','Conners Marsh Flooding State Wildlife Management Area','Cranberry Lake Flooding State Wildlife Management Area','Dead Stream Flooding State Wildlife Management Area','Deadman Swamp State Wildlife Management Area','Deer River Flooding State Wildlife Management Area','Denton Creek Flooding State Wildlife Management Area','Devil''s Lake and Devil''s River Flooding State Wildlife Management Area','Dingman Marsh Flooding State Wildlife Management Area','DNR Boat Launch at Quanicassee','Dog Lake Flooding State Wildlife Management Area','Dollarville Flooding State Wildlife Management Area','Drummond Island Grouse Enhanced Mgmt System (GEMS) SWMA','Drummond Island Pigeon Cove Flooding State Wildlife Management Area','French Farm Flooding State Wildlife Management Area','Friday Flooding State Wildlife Management Area','Garden Grade Grouse Enhanced Mgmt.Sys.(GEMS)(SWMA)','Genes Pond State Wildlife Management Area','Gold Mine Grouse Enhanced Mgmt.Sys.(GEMS)(WMA) of Plum Creek','Goose Creek State Wildlife Management Area','Grass Lake Flooding State Wildlife Management Area','Grass Lake Marsh Flooding State Wildlife Management Area','Greasy Creek Grouse Enhanced Mgmt.Sys.(GEMS)(SWMA)','Groveland Mine Flooding State Wildlife Management Area','Halifax Grouse Enhanced Mgmt.Sys.(GEMS)(SWMA)','Hancock Creek Flooding State Wildlife Management Area','Hardwood Reservoir (north side) State Wildlife Management Area','Hayward Lake to North Lake Floodings State Wildlife Management Area','Hazel Swamp Grouse Enhanced Mgmt.Sys.(GEMS)(SWMA)','Headquarters Lake Impoundment State Wildlife Management Area','Holly Wildlife Unit of Holly State Recreation Area','Houghton Lake Flats North Flooding State Wildlife Management Area','Houghton Lake Flats South Flooding State Wildlife Management Area','Houghton Lake State Wildlife Research Area','Kawkawlin Creek Flooding State Wildlife Management Area','Lake DuBonnet Flooding State Wildlife Management Area','Lake LaVasseur Flooding State Wildlife Management Area','Lake-36 State Wildlife Management Area','Lame Duck Grouse Enhanced Mgmt System (GEMS)(SWMA)','Lee Grande Ranch Grouse Enhanced Mgmt System (GEMS)(SWMA)','Little Betsie Grouse Enhanced Mgmt.Sys.(GEMS)(SWMA)','Little Fox River / Stanley Lake Flooding State Wildlife Management Area','Little Widewaters Flooding State Wildlife Management Area','Mark Knee Memorial Grouse Enhanced Mgmt.Sys.(GEMS)(SWMA)','Marsh Creek / Beaver Lake Flooding State Wildlife Management Area','Melstrand Grouse Enhanced Mgmt.Sys.(GEMS)(SWMA)','Molasses River Flooding No.1 State Wildlife Management Area & part of Lame Duck GEMS (SWMA)','Molasses River Flooding No.2 State Wildlife Management Area & part of Lame Duck GEMS (SWMA)','Molasses River Flooding No.3 State Wildlife Management Area','Molasses River Flooding No.5 State Wildlife Management Area','Mosinee Grouse Enhanced Mgmt.Sys.(GEMS)(SWMA)','Mud Creek Flooding State Wildlife Management Area','Nestoria Creek Flooding State Wildlife Management Area','Net River Flooding State Wildlife Management Area','Old Fur Farm Flooding (Floodwood Swamp) State Wildlife Management Area','Osceola-Missaukee Grasslands State Game Area','Peterson Pond Flooding State Wildlife Management Area','Pike Lake Flooding State Wildlife Management Area','Potagannissing Flooding State Wildlife Management Area','Rainey River Flooding State Wildlife Management Area','Rainey Wildlife Area (SWMA)','Ralph Grouse Enhanced Mgmt.Sys.(GEMS)(SWMA)','Robinson Creek Flooding State Wildlife Management Area','Russell Lake / Lake St. Helen SWMA','Russell Lake / Lake St. Helen SWMA (open water; State owned portion of Russell Lake)','Russell Lake / Lake St. Helen SWMA (open water; State-owned portion of Lake St. Helen)','Sage Lakes State Wildlife Management Area','Sand River / Jeske Flooding State Wildlife Management Area','Skegemog Lake State Wildlife Management Area','Sportsman''s Lake State Wildlife Management Area','Stoney Creek Flooding State Wildlife Management Area','Strickler Grouse Enhanced Mgmt.Sys.(GEMS)(SWMA)','Tobico Marsh Unit of Bay City State Park','Tomahawk Creek Flooding State Wildlife Management Area','Townline Creek Flooding State Wildlife Management Area','Waterloo Wildlife Unit of Waterloo State Recreation Area','Wraco Lodge Lake Flooding State Wildlife Management Area')"
+ },
+ "US National Park Service": {
+  "url": "https://services1.arcgis.com/fBc8EJBxQRMcHlei/arcgis/rest/services/NPS_Fee_Boundary/FeatureServer/0",
+  "where": null
+ },
+ "US Fish and Wildlife Service": {
+  "url": "https://services.arcgis.com/QVENGdaPbd4LUkLV/arcgis/rest/services/FWS_NWRS_HQ_PublicHuntUnits_view/FeatureServer/0",
+  "where": null
+ },
+ "US Forest Service": {
+  "url": "https://services5.arcgis.com/7weheFjxuNkGGiZi/arcgis/rest/services/USA_Federal_Lands_2025/FeatureServer/0",
+  "where": "Agency IN ('Forest Service')"
+ },
+ "Commercial Forest": {
+  "url": "https://services3.arcgis.com/Jdnp1TjADvSDxMAX/arcgis/rest/services/CommercialForestParcels_View/FeatureServer/0",
+  "where": "ParcelStatusText = 'Active'"
+ },
+ "DNR Parks and Recreation": {
+  "url": "https://services3.arcgis.com/Jdnp1TjADvSDxMAX/arcgis/rest/services/DNRBoundariesParksHuntableLandsOPENDATA/FeatureServer/2",
+  "where": null
+ },
+ "DNR Forestry": {
+  "url": "https://services3.arcgis.com/Jdnp1TjADvSDxMAX/arcgis/rest/services/Michigan_DNR_Public_Forest_Inventory_Data/FeatureServer/5",
+  "where": "ManagementType IN (1) AND FCKey NOT IN ('72248')"
+ },
+ "DNR Wildlife": {
+  "url": "https://services3.arcgis.com/Jdnp1TjADvSDxMAX/arcgis/rest/services/DNRWILDLandsOPENDATA/FeatureServer/2",
+  "where": null
+ },
+ "DNR Turkey Tracts": {
+  "url": "https://services3.arcgis.com/Jdnp1TjADvSDxMAX/arcgis/rest/services/DNRWILDLandsOPENDATA/FeatureServer/1",
+  "where": "PropertyType = 'Turkey tract'"
+ },
+ "DNR Grouse Enhanced Management Sites": {
+  "url": "https://services3.arcgis.com/Jdnp1TjADvSDxMAX/arcgis/rest/services/DNRWILDLandsOPENDATA/FeatureServer/1",
+  "where": "PropertyType = 'Grouse enhancement management site'"
+ },
+ "Hunter Access Program Lands": {
+  "url": "https://services3.arcgis.com/Jdnp1TjADvSDxMAX/arcgis/rest/services/DNRWILDLandsOPENDATA/FeatureServer/0",
+  "where": "ActiveOrInactive = 'Active'"
+ },
+ "Canada": {
+  "url": "https://services.arcgis.com/wjcPoefzjpzCgffS/arcgis/rest/services/fed/FeatureServer/0",
+  "where": null
+ },
+ "Other US States": {
+  "url": "https://services.arcgis.com/P3ePLMYs2RVChkJx/arcgis/rest/services/USA_Census_States/FeatureServer/0",
+  "where": "STATE_ABBR <> 'MI'"
+ },
+ "Stand Cover Types": {
+  "url": "https://services3.arcgis.com/Jdnp1TjADvSDxMAX/arcgis/rest/services/MiHuntStandSymbologyFRDPublic/FeatureServer/0",
+  "where": null
+ },
+ "Stand Size/Density": {
+  "url": "https://services3.arcgis.com/Jdnp1TjADvSDxMAX/arcgis/rest/services/MiHuntStandSymbologyFRDPublic/FeatureServer/0",
+  "where": null
+ },
+ "Pheasant Management Units": {
+  "url": "https://services3.arcgis.com/Jdnp1TjADvSDxMAX/arcgis/rest/services/WILDGameSpeciesManagementUnitsAndZonesOPENDATA/FeatureServer/14",
+  "where": null
+ },
+ "Waterfowl Management Units": {
+  "url": "https://services3.arcgis.com/Jdnp1TjADvSDxMAX/arcgis/rest/services/WILDGameSpeciesManagementUnitsAndZonesOPENDATA/FeatureServer/13",
+  "where": null
+ },
+ "Sharptailed Grouse Management Units": {
+  "url": "https://services3.arcgis.com/Jdnp1TjADvSDxMAX/arcgis/rest/services/WILDGameSpeciesManagementUnitsAndZonesOPENDATA/FeatureServer/12",
+  "where": null
+ },
+ "Bobwhite Quail Management Units": {
+  "url": "https://services3.arcgis.com/Jdnp1TjADvSDxMAX/arcgis/rest/services/WILDGameSpeciesManagementUnitsAndZonesOPENDATA/FeatureServer/11",
+  "where": null
+ },
+ "Fisher Management Units": {
+  "url": "https://services3.arcgis.com/Jdnp1TjADvSDxMAX/arcgis/rest/services/WILDGameSpeciesManagementUnitsAndZonesOPENDATA/FeatureServer/10",
+  "where": null
+ },
+ "Otter Management Units": {
+  "url": "https://services3.arcgis.com/Jdnp1TjADvSDxMAX/arcgis/rest/services/WILDGameSpeciesManagementUnitsAndZonesOPENDATA/FeatureServer/9",
+  "where": null
+ },
+ "Marten Management Units": {
+  "url": "https://services3.arcgis.com/Jdnp1TjADvSDxMAX/arcgis/rest/services/WILDGameSpeciesManagementUnitsAndZonesOPENDATA/FeatureServer/8",
+  "where": null
+ },
+ "Bobcat Management Units": {
+  "url": "https://services3.arcgis.com/Jdnp1TjADvSDxMAX/arcgis/rest/services/WILDGameSpeciesManagementUnitsAndZonesOPENDATA/FeatureServer/7",
+  "where": null
+ },
+ "Beaver Management Units": {
+  "url": "https://services3.arcgis.com/Jdnp1TjADvSDxMAX/arcgis/rest/services/WILDGameSpeciesManagementUnitsAndZonesOPENDATA/FeatureServer/6",
+  "where": null
+ },
+ "Turkey Management Units": {
+  "url": "https://services3.arcgis.com/Jdnp1TjADvSDxMAX/arcgis/rest/services/WILDGameSpeciesManagementUnitsAndZonesOPENDATA/FeatureServer/5",
+  "where": null
+ },
+ "Elk Management Units": {
+  "url": "https://services3.arcgis.com/Jdnp1TjADvSDxMAX/arcgis/rest/services/WILDGameSpeciesManagementUnitsAndZonesOPENDATA/FeatureServer/4",
+  "where": null
+ },
+ "Deer Management Units": {
+  "url": "https://services3.arcgis.com/Jdnp1TjADvSDxMAX/arcgis/rest/services/WILDGameSpeciesManagementUnitsAndZonesOPENDATA/FeatureServer/3",
+  "where": "DeerManagementUnit NOT IN ('011','012','014','032','039','075','076','079','080','161','162','261','262','333','341','351','352','354','359','361','419','486','487','499')"
+ },
+ "Bear Management Units": {
+  "url": "https://services3.arcgis.com/Jdnp1TjADvSDxMAX/arcgis/rest/services/WILDGameSpeciesManagementUnitsAndZonesOPENDATA/FeatureServer/2",
+  "where": null
+ },
+ "Zone 123 Boundaries": {
+  "url": "https://services3.arcgis.com/Jdnp1TjADvSDxMAX/arcgis/rest/services/WILDGameSpeciesManagementUnitsAndZonesOPENDATA/FeatureServer/0",
+  "where": null
+ },
+ "Counties": {
+  "url": "https://services3.arcgis.com/dxRQUfTDNtfqZ301/ArcGIS/rest/services/County/FeatureServer/0",
+  "where": null
+ },
+ "Section": {
+  "url": "https://services3.arcgis.com/Jdnp1TjADvSDxMAX/arcgis/rest/services/DNRPublicLandSurveySystemOPENDATA/FeatureServer/1",
+  "where": null
+ },
+ "Town Range": {
+  "url": "https://services3.arcgis.com/Jdnp1TjADvSDxMAX/arcgis/rest/services/DNRPublicLandSurveySystemOPENDATA/FeatureServer/3",
+  "where": null
+ },
+ "DNR Roads": {
+  "url": "https://services3.arcgis.com/Jdnp1TjADvSDxMAX/arcgis/rest/services/DNR_ROADS/FeatureServer/0",
+  "where": "RoadType NOT IN (3,5,4)"
+ },
+ "DNR Trail Temporary Reroutes": {
+  "url": "https://utility.arcgis.com/usrsvcs/servers/860ad7121ae043418c66abb32bb01e96/rest/services/DNR/DNRTrailsOPENDATA/FeatureServer/1",
+  "where": null
+ },
+ "DNR Trail Closures": {
+  "url": "https://utility.arcgis.com/usrsvcs/servers/860ad7121ae043418c66abb32bb01e96/rest/services/DNR/DNRTrailsOPENDATA/FeatureServer/0",
+  "where": null
+ },
+ "DNR Trails": {
+  "url": "https://utility.arcgis.com/usrsvcs/servers/860ad7121ae043418c66abb32bb01e96/rest/services/DNR/DNRTrailsOPENDATA/FeatureServer/21",
+  "where": null
+ },
+ "DNR Parking Lots": {
+  "url": "https://services3.arcgis.com/Jdnp1TjADvSDxMAX/arcgis/rest/services/DNRReferenceAssetsOPENDATA/FeatureServer/6",
+  "where": null
+ },
+ "DNR Boat Access Sites": {
+  "url": "https://services3.arcgis.com/Jdnp1TjADvSDxMAX/arcgis/rest/services/PRDBASPublicView/FeatureServer/0",
+  "where": null
+ }
+}

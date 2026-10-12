@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Michigan Hunt Land</title>
+<meta name="theme-color" content="#1d2419">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="map" aria-label="Map of Michigan lands open to hunting"></div>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true"></span>
+    <span class="brand-name">MI Hunt Land</span>
+  </div>
+  <div id="status" class="status" data-state="off" role="status" aria-live="polite">
+    <span class="status-dot" aria-hidden="true"></span>
+    <span id="status-text">Tap ◎ to check your spot</span>
+  </div>
+</header>
+
+<div class="fab-stack">
+  <button id="btn-locate" class="fab" aria-label="Show my location" title="My location">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8" fill="none"/></svg>
+  </button>
+  <button id="btn-layers" class="fab" aria-label="Layers and basemap" title="Layers">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2 8l10 5 10-5-10-5Z"/><path d="m2 13 10 5 10-5" fill="none"/><path d="m2 17.5 10 5 10-5" fill="none" opacity=".6"/></svg>
+  </button>
+</div>
+
+<div id="coords" class="coords" hidden></div>
+
+<section id="sheet-layers" class="sheet" hidden aria-label="Layers">
+  <div class="sheet-grip" aria-hidden="true"></div>
+  <div class="sheet-head">
+    <h2>Lands open to hunting</h2>
+    <button class="sheet-close" data-close="sheet-layers" aria-label="Close">×</button>
+  </div>
+  <ul id="layer-list" class="layer-list"></ul>
+  <h3 class="sheet-sub">Basemap</h3>
+  <div class="seg" role="radiogroup" aria-label="Basemap">
+    <button id="bm-topo" role="radio" data-basemap="topo" aria-checked="true">Topo</button>
+    <button id="bm-sat" role="radio" data-basemap="sat" aria-checked="false">Satellite</button>
+  </div>
+  <p class="fine">Boundaries from Michigan DNR open data, filtered the same way as the DNR's MiHunt map. Data as of <span id="data-date"></span>. Safety zones (450 ft around occupied buildings), posted closures and local ordinances are not shown. Check the <a href="https://www.michigan.gov/mihunt" target="_blank" rel="noopener">official MiHunt map</a> and the current Hunting Digest before you hunt.</p>
+</section>
+
+<section id="sheet-info" class="sheet" hidden aria-label="Parcel details">
+  <div class="sheet-grip" aria-hidden="true"></div>
+  <div class="sheet-head">
+    <div>
+      <div id="info-kind" class="kind"></div>
+      <h2 id="info-title"></h2>
+    </div>
+    <button class="sheet-close" data-close="sheet-info" aria-label="Close">×</button>
+  </div>
+  <dl id="info-rows" class="rows"></dl>
+  <p id="info-coords" class="fine mono"></p>
+</section>
+
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
