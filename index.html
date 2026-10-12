@@ -187,6 +187,15 @@
     </div>
     <p id="share-note" class="fine"></p>
   </form>
+  <section id="pin-photos" class="pin-photos" hidden>
+    <div class="log-title">
+      <h3 class="sheet-sub">Photos <span id="photo-count" class="photo-count"></span></h3>
+      <button type="button" id="btn-photo-add" class="btn-ghost small-btn">Add photos</button>
+    </div>
+    <input id="photo-file" type="file" accept="image/*" multiple hidden>
+    <p id="photo-note" class="fine" aria-live="polite"></p>
+    <div id="photo-grid" class="photo-grid"></div>
+  </section>
   <section id="pin-log" class="pin-log">
     <div class="log-title">
       <h3 class="sheet-sub">Hunt log</h3>
@@ -275,5 +284,22 @@
 <script src="stats.js"></script>
 <script src="measure.js"></script>
 <script src="sync.js"></script>
+
+<div id="photo-viewer" class="photo-viewer" hidden role="dialog" aria-modal="true" aria-label="Photo">
+  <div class="viewer-top">
+    <span id="viewer-time" class="viewer-time"></span>
+    <button type="button" id="viewer-close" class="sheet-close" aria-label="Close">×</button>
+  </div>
+  <img id="viewer-img" class="viewer-img" alt="">
+  <div class="viewer-bottom">
+    <input id="viewer-note" type="text" maxlength="120" placeholder="Note, e.g. 8-point, came from the swamp" autocomplete="off">
+    <div class="viewer-actions">
+      <button type="button" id="viewer-prev" class="btn-ghost">‹ Newer</button>
+      <button type="button" id="viewer-delete" class="btn-ghost">Delete</button>
+      <button type="button" id="viewer-next" class="btn-ghost">Older ›</button>
+    </div>
+  </div>
+</div>
+<script src="photos.js"></script>
 </body>
 </html>

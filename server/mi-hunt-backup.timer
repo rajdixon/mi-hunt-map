@@ -1,0 +1,9 @@
+[Unit]
+Description=Nightly MI Hunt Land snapshot (05:30 UTC = 1:30 AM Eastern)
+
+[Timer]
+OnCalendar=*-*-* 05:30
+Persistent=true
+
+[Install]
+WantedBy=timers.target

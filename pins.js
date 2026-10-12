@@ -22,7 +22,7 @@ const PIN_TYPES = {
              svg: '<circle cx="12" cy="12" r="4.5"/>' },
 };
 const SHARE_BASE = "https://rajdixon.github.io/mi-hunt-map/";
-const LOG_KINDS = { sighting: "Sighting", shot: "Shot", harvest: "Harvest", nodeer: "No deer", note: "Note" };
+const LOG_KINDS = { sighting: "Sighting", shot: "Shot", harvest: "Harvest", nodeer: "No deer", note: "Note", check: "Cam check" };
 
 let pins = store.get("pins", []);
 const markers = new Map();
@@ -102,7 +102,7 @@ async function renderPinList() {
     const meta = here ? `${t.label} · ${fmtDist(distMeters(here, [p.lng, p.lat]))} ${bearing(here, [p.lng, p.lat])}`
                       : `${t.label} · ${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}`;
     text.append(el("span", "pin-row-name", p.name || t.label), el("span", "pin-row-meta", meta));
-    const sum = [logSummary(p), statsSummary(p)].filter(Boolean).join(" · ");
+    const sum = [camSummary(p), logSummary(p), statsSummary(p)].filter(Boolean).join(" · ");
     if (sum) text.append(el("span", "pin-row-meta", sum));
     const scentLine = el("span", "pin-row-meta scent-warn"); scentLine.hidden = true;
     text.append(scentLine);
@@ -194,6 +194,8 @@ function openPinEditor(pin, { shared = false } = {}) {
   $("share-note").textContent = "";
   renderLog();
   renderStats();
+  $("photo-note").textContent = "";
+  renderPhotos();
   showPreview(editing);
   openSheet("sheet-pin-edit");
 }

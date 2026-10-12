@@ -1,0 +1,6 @@
+[Unit]
+Description=MI Hunt Land: nightly snapshot of pins, logs, tracks and photos
+
+[Service]
+Type=oneshot
+ExecStart=%h/mi-hunt-map/server/backup.sh

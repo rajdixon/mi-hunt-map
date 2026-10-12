@@ -82,3 +82,8 @@ The hunting-hours sheet (tap the hours chip) shows, for the chosen day: the NWS 
 ## Private server and sync
 
 `server/server.mjs` (Node 22, no dependencies) serves the app at hunt.tradersedges.net through the Cloudflare Tunnel on webserver02, behind Cloudflare Access. It verifies the Access token on every request and serves nothing until `CF_TEAM` and `CF_AUD` are set. Each user's pins (with hunt logs) and tracks are kept in `~/mi-hunt-data/` as one JSON file. `sync.js` keeps the phone's copy and syncs when there's a signal; the newer edit of each pin or track wins and deletes carry over. Runs as a user service (`systemctl --user status mi-hunt`) with a daily `git pull`. Shared-pin links point at the public GitHub Pages copy so people without a login can open them.
+
+## Photos and backups
+
+- **Photos** (`photos.js`, server copy only): add photos to any pin from its editor. The phone resizes each one (2048 px full, 360 px thumbnail) and uploads to `/api/photos/<id>/<full|thumb>`; the time comes from the photo's EXIF DateTimeOriginal. The photo list is stored on the pin and syncs with it. Adding photos to a trail cam pin logs a "Cam check". The service worker keeps each photo once viewed, for offline. Files no pin refers to are removed after 7 days.
+- **Backups**: `server/backup.sh` (user timer `mi-hunt-backup`, 05:30 UTC) snapshots `~/mi-hunt-data` to `~/mi-hunt-backups/<day>` with hard links, keeping 30 days; restore steps are in the script. The Mac copies the latest snapshot into iCloud Drive each night (`~/bin/mi-hunt-backup.sh`, launchd `com.rajdixon.mi-hunt-backup`) and emails the result.

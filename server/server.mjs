@@ -29,6 +29,7 @@ const DATA_DIR = path.resolve(process.env.DATA_DIR || path.join(os.homedir(), "m
 const { CF_TEAM, CF_AUD, DEV_USER } = process.env;
 const ALLOWED = (process.env.ALLOWED_EMAILS || "").split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
 const MAX_BODY = 20 * 1024 * 1024;
+const ORPHAN_DAYS = 7;   // photos no pin refers to are removed after this long
 const TOMB_DAYS = 180;
 
 const TYPES = {
@@ -75,7 +76,11 @@ async function userOf(req) {
 }
 
 // ---------- Data ----------
-const fileOf = email => path.join(DATA_DIR, crypto.createHash("sha256").update(email).digest("hex").slice(0, 24) + ".json");
+const keyOf = email => crypto.createHash("sha256").update(email).digest("hex").slice(0, 24);
+const fileOf = email => path.join(DATA_DIR, keyOf(email) + ".json");
+const photoDir = email => path.join(DATA_DIR, "photos", keyOf(email));
+const PHOTO_ID = /^[a-z0-9]{6,32}$/;
+const PHOTO_SIZES = ["full", "thumb"];
 
 async function load(email) {
   try { return JSON.parse(await fs.readFile(fileOf(email), "utf8")); }
@@ -115,18 +120,69 @@ function send(res, status, body, type = "application/json") {
   res.end(typeof body === "string" || Buffer.isBuffer(body) ? body : JSON.stringify(body));
 }
 
-async function readBody(req) {
+async function readRaw(req, max = MAX_BODY) {
   const chunks = [];
   let n = 0;
   for await (const c of req) {
     n += c.length;
-    if (n > MAX_BODY) throw Object.assign(new Error("Too large"), { status: 413 });
+    if (n > max) throw Object.assign(new Error("Too large"), { status: 413 });
     chunks.push(c);
   }
-  return JSON.parse(Buffer.concat(chunks).toString() || "{}");
+  return Buffer.concat(chunks);
+}
+
+async function readBody(req) {
+  return JSON.parse((await readRaw(req)).toString() || "{}");
+}
+
+// ---------- Photos ----------
+// /api/photos/<id>/<full|thumb>: the phone resizes before upload and sends JPEGs
+async function photos(req, res, email, parts) {
+  const [id, size] = parts;
+  if (!PHOTO_ID.test(id || "")) return send(res, 404, { error: "Not found" });
+  const dir = photoDir(email);
+  if (req.method === "DELETE" && !size) {
+    await Promise.all(PHOTO_SIZES.map(z => fs.rm(path.join(dir, `${id}.${z}.jpg`), { force: true })));
+    return send(res, 200, { ok: true });
+  }
+  if (!PHOTO_SIZES.includes(size)) return send(res, 404, { error: "Not found" });
+  const file = path.join(dir, `${id}.${size}.jpg`);
+  if (req.method === "GET") {
+    try {
+      const body = await fs.readFile(file);
+      res.writeHead(200, { "Content-Type": "image/jpeg", "Cache-Control": "private, max-age=31536000, immutable", "X-Content-Type-Options": "nosniff" });
+      return res.end(body);
+    } catch { return send(res, 404, { error: "Not found" }); }
+  }
+  if (req.method === "PUT") {
+    const body = await readRaw(req, 15 * 1024 * 1024);
+    if (body[0] !== 0xff || body[1] !== 0xd8) return send(res, 415, { error: "JPEG only" });
+    await fs.mkdir(dir, { recursive: true, mode: 0o700 });
+    const tmp = `${file}.${process.pid}.tmp`;
+    await fs.writeFile(tmp, body, { mode: 0o600 });
+    await fs.rename(tmp, file);
+    return send(res, 200, { ok: true });
+  }
+  return send(res, 405, { error: "Method not allowed" });
+}
+
+// Remove photo files that no pin has referred to for a week (pin or photo deleted)
+async function pruneOrphans(email, doc) {
+  const keep = new Set(doc.pins.filter(p => !p.deleted).flatMap(p => (p.photos || []).map(x => x.id)));
+  const dir = photoDir(email);
+  let names = [];
+  try { names = await fs.readdir(dir); } catch { return; }
+  const cutoff = Date.now() - ORPHAN_DAYS * 86400e3;
+  for (const n of names) {
+    const id = n.split(".")[0];
+    if (keep.has(id)) continue;
+    const f = path.join(dir, n);
+    try { if ((await fs.stat(f)).mtimeMs < cutoff) await fs.rm(f); } catch {}
+  }
 }
 
 async function api(req, res, email, pathname) {
+  if (pathname.startsWith("/api/photos/")) return photos(req, res, email, pathname.slice(12).split("/"));
   if (pathname !== "/api/sync") return send(res, 404, { error: "Not found" });
   if (req.method === "GET") {
     const doc = await load(email);
@@ -140,6 +196,7 @@ async function api(req, res, email, pathname) {
     doc.tracks = merge(doc.tracks, Array.isArray(body.tracks) ? body.tracks : []);
     doc.saved = Date.now();
     await save(email, doc);
+    pruneOrphans(email, doc).catch(e => console.error("prune", e));
     return send(res, 200, { email, pins: doc.pins, tracks: doc.tracks });
   }
   return send(res, 405, { error: "Method not allowed" });
