@@ -72,3 +72,9 @@ Safety zones (450 ft around occupied buildings), posted closures, refuges inside
 ## Weather and moon
 
 The hunting-hours sheet (tap the hours chip) shows, for the chosen day: the NWS forecast (high/low, sky, rain chance, temperature and wind at first light and in the last hour), a "cold snap" flag when the daytime high is 8°F or more below the day before, the moon phase with rise/set/overhead/underfoot times, solunar periods trimmed to legal hours, and the pressure trend (hourly sea-level pressure from [Open-Meteo](https://open-meteo.com), since NWS has none): readings with 3-hour arrows at first light and the last hour, and a daily label for rising, falling, steady or a front passing. A 7-day strip lets you pick a day. The moon is computed on the phone with [SunCalc](https://github.com/mourner/suncalc) (`vendor/suncalc.js`), so it works offline. Solunar periods are labelled as tradition: GPS-collar studies found little link between moon phase and deer movement, while temperature was the most consistent predictor.
+
+## Scent cones, patterns and measuring
+
+- **Scent cones** (`scent.js`): a wedge 300 m long and 50° wide downwind of each tree stand and ground blind, from the current forecast hour (a 70 m circle when calm). It turns red when it covers a trail cam, rub or scrape pin, and the pin list and editor say which. Toggle under Layers.
+- **Patterns** (`stats.js`): hunt-log entries are grouped into sits (one morning or evening at a pin). For wind, time of day, temperature and pressure trend, each pin shows sits with deer out of sits logged. "No deer" entries record empty sits. New entries save the forecast wind, temperature and 3-hour pressure change as numbers; older ones are parsed from the wind text.
+- **Measure** (`measure.js`, ruler in the top bar): tap points for distance and the area they enclose, or drop 450 ft safety-zone rings. Tapping a pin measures to it exactly.

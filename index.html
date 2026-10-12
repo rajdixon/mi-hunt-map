@@ -26,6 +26,9 @@
   <button id="btn-search" class="top-btn" aria-label="Search" title="Search">
     <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" fill="none"/><path d="m15.5 15.5 5 5" fill="none"/></svg>
   </button>
+  <button id="btn-measure" class="top-btn" aria-label="Measure distance and area" title="Measure" aria-pressed="false">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 15.5 15.5 3.5l5 5-12 12Z" fill="none"/><path d="m7 12 2 2M10 9l2 2M13 6l2 2" fill="none"/></svg>
+  </button>
   <div id="status" class="status" data-state="off" role="status" aria-live="polite">
     <span class="status-dot" aria-hidden="true"></span>
     <span id="status-text">Tap ◎ to check your spot</span>
@@ -36,6 +39,18 @@
   <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" fill="none"/></svg>
   <span class="chip-text"><span id="chip-main" class="chip-main"></span><span id="chip-sub" class="chip-sub"></span></span>
 </button>
+
+<div id="measure-bar" class="measure-bar" hidden>
+  <div class="measure-modes" role="radiogroup" aria-label="Measure mode">
+    <button type="button" class="measure-mode" data-mode="line" role="radio">Distance / area</button>
+    <button type="button" class="measure-mode" data-mode="ring" role="radio">450 ft ring</button>
+  </div>
+  <div class="measure-read" aria-live="polite"><strong id="measure-main"></strong><span id="measure-sub"></span></div>
+  <div class="measure-actions">
+    <button type="button" id="btn-measure-undo" class="btn-ghost">Undo</button>
+    <button type="button" id="btn-measure-done" class="btn-primary">Done</button>
+  </div>
+</div>
 
 <button id="rec-pill" class="rec-pill" hidden aria-label="Track recording">
   <span class="rec-dot" aria-hidden="true"></span>
@@ -75,6 +90,10 @@
   <div id="basemap-list" class="basemaps" role="radiogroup" aria-label="Basemap"></div>
   <h3 class="sheet-sub">Overlays</h3>
   <ul id="overlay-list" class="layer-list overlay-list"></ul>
+  <ul class="layer-list overlay-list">
+    <li><label for="scent-on"><input type="checkbox" id="scent-on">
+      <span><span class="layer-name">Scent cones at stands and blinds</span><span class="layer-note">Downwind of each stand for this hour's forecast; red when it covers a trail cam, rub or scrape</span></span></label></li>
+  </ul>
   <p class="fine">Overlays load from the DNR as you move the map, so they need a signal.</p>
   <p class="fine">Boundaries from Michigan DNR open data, filtered the same way as the DNR's MiHunt map. Data as of <span id="data-date"></span>. Safety zones (450 ft around occupied buildings), posted closures and local ordinances are not shown. Check the <a href="https://www.michigan.gov/mihunt" target="_blank" rel="noopener">official MiHunt map</a> and the current Hunting Digest before you hunt.</p>
 </section>
@@ -153,6 +172,7 @@
     <div id="pin-wind-field" class="field"><span>Good winds (where the wind comes from)</span>
       <div id="pin-winds" class="wind-chips"></div>
       <p id="pin-good-windows" class="fine good-windows"></p>
+      <p id="pin-scent" class="fine"></p>
     </div>
     <p id="pin-coords" class="fine mono"></p>
     <div class="save-actions">
@@ -176,6 +196,7 @@
         <button type="button" class="log-kind-btn" data-kind="sighting" role="radio">Sighting</button>
         <button type="button" class="log-kind-btn" data-kind="shot" role="radio">Shot</button>
         <button type="button" class="log-kind-btn" data-kind="harvest" role="radio">Harvest</button>
+        <button type="button" class="log-kind-btn" data-kind="nodeer" role="radio">No deer</button>
         <button type="button" class="log-kind-btn" data-kind="note" role="radio">Note</button>
       </div>
       <label class="field"><span>What happened</span><input id="log-text" type="text" maxlength="200" placeholder="e.g. 2 does and a 6-point at 7:40, came from the swamp" autocomplete="off"></label>
@@ -188,6 +209,7 @@
         <button type="button" id="btn-log-cancel" class="btn-ghost">Cancel</button>
       </div>
     </div>
+    <div id="pin-stats" class="pin-stats" hidden></div>
     <ul id="log-list" class="log-list"></ul>
     <p id="log-empty" class="fine">No entries yet. Log sightings, shots and harvests here to see what this spot does over the seasons.</p>
   </section>
@@ -248,5 +270,8 @@
 <script src="tracks.js"></script>
 <script src="overlays.js"></script>
 <script src="search.js"></script>
+<script src="scent.js"></script>
+<script src="stats.js"></script>
+<script src="measure.js"></script>
 </body>
 </html>

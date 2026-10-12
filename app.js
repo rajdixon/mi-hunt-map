@@ -151,6 +151,7 @@ map.on("moveend", () => {
 
 // ---------- Tap a parcel ----------
 map.on("click", e => {
+  if (typeof measureClick === "function" && measureClick(e)) return;
   if (typeof pinsSuppressClick === "function" && pinsSuppressClick()) return;
   const hits = hitsAt([e.lngLat.lng, e.lngLat.lat], true);
   // Overlay features under the tap (stand, road, trail, section...), from overlays.js

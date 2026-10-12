@@ -341,3 +341,26 @@ body:has(.sheet:not([hidden])) .coords { opacity: 0; }
 .wx-pressure[data-kind="front"], .od-pressure[data-kind="front"] { color: #9cc4ff; }
 .od-pressure { font-size: 12px; font-weight: 700; color: var(--ink-dim); }
 .wx-meaning { color: var(--ink-dim); margin-top: -2px !important; }
+
+/* Scent cones, patterns (stats.js), measure */
+.scent-warn { color: #ff8a80 !important; font-weight: 600; }
+.log-kinds { grid-template-columns: repeat(auto-fit, minmax(62px, 1fr)); }
+.log-nodeer { border: 1px solid var(--ink-dim); }
+.pin-stats { margin-top: 10px; padding: 10px 12px; border-radius: 12px; background: var(--panel-2); border: 1px solid var(--line); display: grid; gap: 6px; }
+.pin-stats .fine { margin: 0; }
+.stats-head { font-weight: 700; }
+.stats-row { display: grid; grid-template-columns: 92px 1fr; gap: 8px; font-size: 14px; }
+.stats-title { color: var(--ink-dim); }
+.stats-vals { display: flex; flex-wrap: wrap; gap: 4px 10px; font-variant-numeric: tabular-nums; }
+.stats-val.best { color: var(--ok); font-weight: 700; }
+.top-btn[aria-pressed="true"] { background: var(--blaze); border-color: var(--blaze); }
+.measure-bar { position: fixed; z-index: 6; left: 12px; right: 88px; bottom: calc(var(--safe-b) + 16px); padding: 10px 12px; border-radius: 16px;
+  background: var(--panel); border: 1px solid var(--line); box-shadow: 0 6px 20px rgba(0,0,0,.35); display: grid; gap: 8px; }
+.measure-modes { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.measure-mode { padding: 7px 0; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-2); color: var(--ink); font-weight: 600; font-size: 13px; }
+.measure-mode[aria-checked="true"] { background: var(--blaze); border-color: var(--blaze); color: #fff; }
+.measure-read { display: grid; gap: 2px; }
+.measure-read strong { font: 700 24px/1.1 var(--display); font-variant-numeric: tabular-nums; }
+.measure-read span { color: var(--ink-dim); font-size: 13px; }
+.measure-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.measure-actions button { padding: 9px 0; }

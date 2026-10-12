@@ -21,7 +21,7 @@ const PIN_TYPES = {
   other:   { label: "Other", color: "#e5534b",
              svg: '<circle cx="12" cy="12" r="4.5"/>' },
 };
-const LOG_KINDS = { sighting: "Sighting", shot: "Shot", harvest: "Harvest", note: "Note" };
+const LOG_KINDS = { sighting: "Sighting", shot: "Shot", harvest: "Harvest", nodeer: "No deer", note: "Note" };
 
 let pins = store.get("pins", []);
 const markers = new Map();
@@ -44,7 +44,11 @@ function pinMarkerEl(pin) {
   b.style.setProperty("--pin", t.color);
   b.setAttribute("aria-label", `${t.label}: ${pin.name || "Unnamed"}`);
   b.append(pinDot(pin.type), el("span", "pin-label", pin.name || ""));
-  b.addEventListener("click", e => { e.stopPropagation(); openPinEditor(pin); });
+  b.addEventListener("click", e => {
+    e.stopPropagation();
+    if (typeof measure !== "undefined" && measure) measureAdd([pin.lng, pin.lat]);
+    else openPinEditor(pin);
+  });
   return b;
 }
 
@@ -53,6 +57,7 @@ function drawPins() {
   markers.clear();
   for (const p of pins)
     markers.set(p.id, new maplibregl.Marker({ element: pinMarkerEl(p), anchor: "center" }).setLngLat([p.lng, p.lat]).addTo(map));
+  if (typeof drawScent === "function") drawScent();
 }
 
 // ---------- Distance ----------
@@ -96,8 +101,15 @@ async function renderPinList() {
     const meta = here ? `${t.label} · ${fmtDist(distMeters(here, [p.lng, p.lat]))} ${bearing(here, [p.lng, p.lat])}`
                       : `${t.label} · ${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}`;
     text.append(el("span", "pin-row-name", p.name || t.label), el("span", "pin-row-meta", meta));
-    const sum = logSummary(p);
+    const sum = [logSummary(p), statsSummary(p)].filter(Boolean).join(" · ");
     if (sum) text.append(el("span", "pin-row-meta", sum));
+    const scentLine = el("span", "pin-row-meta scent-warn"); scentLine.hidden = true;
+    text.append(scentLine);
+    if (SCENT_FROM.includes(p.type)) scentInfo(p).then(s => {
+      if (!s?.hits.length) return;
+      scentLine.textContent = `Scent over ${s.hits.map(h => h.pin.name || PIN_TYPES[h.pin.type].label).join(", ")} now`;
+      scentLine.hidden = false;
+    });
     const badge = el("span", "wind-badge"); badge.hidden = true;
     b.append(pinDot(p.type), text, badge);
     b.addEventListener("click", () => {
@@ -147,6 +159,7 @@ function openPinEditor(pin, { shared = false } = {}) {
     b.addEventListener("click", () => {
       editing.type = k;
       $("pin-wind-field").hidden = !!t.sign;
+      renderScentNote();
       types.querySelectorAll(".pin-type").forEach(x => x.setAttribute("aria-checked", String(x === b)));
     });
     types.append(b);
@@ -164,6 +177,7 @@ function openPinEditor(pin, { shared = false } = {}) {
     winds.append(b);
   }
   renderGoodWindows();
+  renderScentNote();
   $("pin-wind-field").hidden = !!PIN_TYPES[editing.type]?.sign;
 
   $("pin-name").value = editing.name;
@@ -178,6 +192,7 @@ function openPinEditor(pin, { shared = false } = {}) {
   $("log-form").hidden = true;
   $("share-note").textContent = "";
   renderLog();
+  renderStats();
   showPreview(editing);
   openSheet("sheet-pin-edit");
 }
@@ -193,6 +208,16 @@ async function renderGoodWindows() {
   const w = goodWindows(fc, p.winds, p.lng, p.lat);
   box.textContent = (now ? `Now: ${windText(now)}${windMatches(now.dir, p.winds) ? " (good)" : ""}. ` : "") +
     (w.length ? `Good wind in legal hours: ${w.map(fmtWindow).join(", ")}.` : "No good-wind hunting hours in the next 3 days.");
+}
+
+async function renderScentNote() {
+  const box = $("pin-scent"), p = editing;
+  box.textContent = ""; box.classList.remove("scent-warn");
+  if (!p || !SCENT_FROM.includes(p.type)) return;
+  const s = await scentInfo(p);
+  if (editing !== p || !s) return;
+  box.textContent = s.text;
+  box.classList.toggle("scent-warn", s.hits.length > 0);
 }
 
 // Ghost marker while placing a new pin
@@ -249,7 +274,7 @@ function renderLog() {
     del.addEventListener("click", () => {
       if (!del.classList.contains("confirm")) { del.classList.add("confirm"); del.textContent = "Confirm"; return; }
       updatePin(editing.id, p => ({ ...p, log: (p.log || []).filter(y => y.id !== x.id) }));
-      renderLog(); drawPins();
+      renderLog(); renderStats(); drawPins();
     });
     head.append(del);
     li.append(head);
@@ -286,13 +311,22 @@ $("log-time").addEventListener("change", async () => {
   if (at && editing === p) $("log-wind").value = `${windText(at)}, ${at.temp}°F`;
 });
 $("btn-log-cancel").addEventListener("click", () => { $("log-form").hidden = true; });
-$("btn-log-save").addEventListener("click", () => {
-  const t = new Date($("log-time").value);
-  const entry = { id: newId(), kind: $("log-form").dataset.kind, t: (isNaN(t) ? new Date() : t).toISOString(),
-                  text: $("log-text").value.trim(), wind: $("log-wind").value.trim() };
-  updatePin(editing.id, p => ({ ...p, log: [...(p.log || []), entry] }));
+$("btn-log-save").addEventListener("click", async () => {
+  const p = editing;
+  let t = new Date($("log-time").value);
+  if (isNaN(t)) t = new Date();
+  const wind = $("log-wind").value.trim();
+  const entry = { id: newId(), kind: $("log-form").dataset.kind, t: t.toISOString(), text: $("log-text").value.trim(), wind };
+  // Save the weather as numbers too (wind, temp, pressure trend) for the patterns.
+  // If the wind text was edited by hand, it wins over the forecast.
+  const wx = wxAt(await getForecast(p.lng, p.lat), t);
+  const typed = entryWx({ wind });
+  if (wx || typed.dir || typed.temp != null) entry.wx = { ...wx, ...Object.fromEntries(Object.entries(typed).filter(([, v]) => v != null)) };
+  if (editing !== p) return;
+  updatePin(p.id, q => ({ ...q, log: [...(q.log || []), entry] }));
   $("log-form").hidden = true;
   renderLog();
+  renderStats();
 });
 
 // ---------- Share a pin ----------
