@@ -238,6 +238,11 @@ function renderRules() {
   if (tb.children.length) { hs.append(el("div", "week-title", "Following days")); hs.append(week); }
   body.append(hs);
 
+  // Weather and moon (outlook.js)
+  const os = section("Weather and moon");
+  renderOutlook(os, place, iso, pt);
+  body.append(os);
+
   // Seasons
   const ss = section(iso === today ? "Seasons open today" : "Seasons open this day", rules.data.seasonsPage);
   const open = seasonsOn(iso, place);

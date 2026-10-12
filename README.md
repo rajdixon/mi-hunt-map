@@ -68,3 +68,7 @@ The layer filters are saved in `scripts/layers.json`, copied from MiHunt's web m
 ## Not shown
 
 Safety zones (450 ft around occupied buildings), posted closures, refuges inside otherwise open areas, and local ordinances. Treat this map as a guide, not a legal boundary.
+
+## Weather and moon
+
+The hunting-hours sheet (tap the hours chip) shows, for the chosen day: the NWS forecast (high/low, sky, rain chance, temperature and wind at first light and in the last hour), a "cold snap" flag when the daytime high is 8°F or more below the day before, the moon phase with rise/set/overhead/underfoot times, and solunar periods trimmed to legal hours. A 7-day strip lets you pick a day. The moon is computed on the phone with [SunCalc](https://github.com/mourner/suncalc) (`vendor/suncalc.js`), so it works offline. Solunar periods are labelled as tradition: GPS-collar studies found little link between moon phase and deer movement, while temperature was the most consistent predictor.

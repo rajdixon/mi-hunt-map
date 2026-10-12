@@ -11,28 +11,47 @@ const wxMem = new Map();
 
 function wxKey(lng, lat) { return `${(Math.round(lat * 20) / 20).toFixed(2)},${(Math.round(lng * 20) / 20).toFixed(2)}`; }
 
-// Resolves { periods: [{ t, end, dir, mph, temp, sky }], fetched, stale } or null
+// Resolves { periods: [{ t, end, dir, mph, temp, sky, pop }], days: [{ date, name, day, night }],
+// fetched, stale } or null. `days` comes from the 12-hour forecast and may be empty.
 async function getForecast(lng, lat) {
   const key = wxKey(lng, lat);
-  let fc = wxMem.get(key) || store.get("wx:" + key, null);
+  let fc = wxMem.get(key) || store.get("wx2:" + key, null);
   if (fc && Date.now() - fc.fetched < WX_TTL) return fc;
   try {
     const pt = await (await fetch(`https://api.weather.gov/points/${lat.toFixed(4)},${lng.toFixed(4)}`)).json();
     const url = pt.properties?.forecastHourly;
     if (!url) throw new Error("No forecast for this point");
-    const data = await (await fetch(url)).json();
-    const periods = (data.properties?.periods || []).slice(0, 72).map(p => ({
+    const [hourly, daily] = await Promise.all([
+      fetch(url).then(r => r.json()),
+      fetch(pt.properties.forecast).then(r => r.json()).catch(() => null),
+    ]);
+    const periods = (hourly.properties?.periods || []).slice(0, 168).map(p => ({
       t: p.startTime, end: p.endTime, dir: p.windDirection, mph: parseInt(p.windSpeed, 10) || 0,
-      temp: p.temperature, sky: p.shortForecast,
+      temp: p.temperature, sky: p.shortForecast, pop: p.probabilityOfPrecipitation?.value ?? null,
     }));
     if (!periods.length) throw new Error("Empty forecast");
-    fc = { periods, fetched: Date.now() };
+    fc = { periods, days: dailyDays(daily), fetched: Date.now() };
     wxMem.set(key, fc);
-    store.set("wx:" + key, fc);
+    store.set("wx2:" + key, fc);
     return fc;
   } catch {
     return fc ? { ...fc, stale: true } : null;
   }
+}
+
+// Group the NWS 12-hour periods into calendar days (in the forecast office's
+// time zone, which the timestamps carry): the daytime high and that night's low
+function dailyDays(daily) {
+  const days = new Map();
+  for (const p of daily?.properties?.periods || []) {
+    const date = p.startTime.slice(0, 10);
+    const d = days.get(date) || { date, name: p.name };
+    const part = { temp: p.temperature, sky: p.shortForecast, text: p.detailedForecast,
+                   pop: p.probabilityOfPrecipitation?.value ?? null, wind: `${p.windDirection} ${p.windSpeed}`.trim() };
+    if (p.isDaytime) { d.day = part; d.name = p.name; } else d.night = part;
+    days.set(date, d);
+  }
+  return [...days.values()];
 }
 
 function periodAt(fc, when = new Date()) {
@@ -133,7 +152,10 @@ async function renderWindCard() {
     c.append(el("span", "wind-h", fmtWxHour.format(new Date(p.t))));
     if (calm) c.append(el("span", "wind-calm", "Calm"));
     else c.append(windArrow(p.dir), el("span", null, p.dir), el("span", "wind-mph", `${p.mph}`));
+    c.append(el("span", "wind-temp", `${p.temp}°`));
     strip.append(c);
   }
-  box.append(head, strip, el("div", "fine wind-meta", `NWS forecast for ${source} · ${ageText(fc)}${fc.stale ? " (no signal)" : ""}`));
+  const more = el("button", "more-btn", "7-day forecast and moon ›");
+  more.addEventListener("click", () => { closeSheet("sheet-pins"); rules.date = null; renderRules(); openSheet("sheet-rules"); });
+  box.append(head, strip, more, el("div", "fine wind-meta", `NWS forecast for ${source} · ${ageText(fc)}${fc.stale ? " (no signal)" : ""}`));
 }
