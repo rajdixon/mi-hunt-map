@@ -61,10 +61,10 @@
   </div>
   <ul id="layer-list" class="layer-list"></ul>
   <h3 class="sheet-sub">Basemap</h3>
-  <div class="seg" role="radiogroup" aria-label="Basemap">
-    <button id="bm-topo" role="radio" data-basemap="topo" aria-checked="true">Topo</button>
-    <button id="bm-sat" role="radio" data-basemap="sat" aria-checked="false">Satellite</button>
-  </div>
+  <div id="basemap-list" class="basemaps" role="radiogroup" aria-label="Basemap"></div>
+  <h3 class="sheet-sub">Overlays</h3>
+  <ul id="overlay-list" class="layer-list overlay-list"></ul>
+  <p class="fine">Overlays load from the DNR as you move the map, so they need a signal.</p>
   <p class="fine">Boundaries from Michigan DNR open data, filtered the same way as the DNR's MiHunt map. Data as of <span id="data-date"></span>. Safety zones (450 ft around occupied buildings), posted closures and local ordinances are not shown. Check the <a href="https://www.michigan.gov/mihunt" target="_blank" rel="noopener">official MiHunt map</a> and the current Hunting Digest before you hunt.</p>
 </section>
 
@@ -156,6 +156,7 @@
     <button class="sheet-close" data-close="sheet-info" aria-label="Close">×</button>
   </div>
   <dl id="info-rows" class="rows"></dl>
+  <div id="info-extra"></div>
   <p id="info-coords" class="fine mono"></p>
 </section>
 
@@ -163,5 +164,6 @@
 <script src="app.js"></script>
 <script src="rules.js"></script>
 <script src="pins.js"></script>
+<script src="overlays.js"></script>
 </body>
 </html>

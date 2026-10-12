@@ -137,6 +137,13 @@ body:has(.sheet:not([hidden])) .coords { opacity: 0; }
 .layer-name { font-weight: 600; }
 .layer-note { display: block; font-size: 13px; color: var(--ink-dim); }
 
+.basemaps { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; }
+.basemaps button { padding: 11px 6px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel-2); font-weight: 600; font-size: 14px; }
+.basemaps button[aria-checked="true"] { background: var(--blaze); border-color: var(--blaze); color: #fff; }
+.layer-note .zoom-hint { color: var(--blaze); }
+.info-extra { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
+.info-extra-title { font: 700 19px/1.15 var(--display); }
+.info-extra .rows { margin-top: 8px; }
 .seg { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
 .seg button { padding: 10px; border: 0; background: var(--panel-2); font-weight: 600; }
 .seg button[aria-checked="true"] { background: var(--blaze); color: #fff; }

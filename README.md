@@ -13,6 +13,12 @@ Layers come from the Michigan DNR's ArcGIS open data. They use the same filters 
 | Commercial Forest | CommercialForestParcels_View | `ParcelStatusText = 'Active'` |
 | National Forest | USA Federal Lands 2025 | `Agency = 'Forest Service'`, clipped to Michigan |
 
+## Background maps and overlays
+
+Backgrounds: Esri Topo, Esri Satellite, LiDAR terrain (USGS 3DEP bare-earth hillshade, multidirectional), USGS Topo, USGS Imagery + Topo. All can be saved for offline use.
+
+Overlays are queried live from DNR ArcGIS services for the area on screen, so they need a signal: forest stand cover type (zoom 13+), DNR roads (11+), DNR trails with hunter walking trails and temporary closures (10+), DNR parking (10+), PLSS sections (12+) and townships (8+). DMU boundaries come from `data/dmu.geojson` and work offline.
+
 ## Deer hunting hours and rules
 
 Tap the hours chip under the top bar. It shows legal hunting hours and the 2026 deer rules for your GPS position, or for the map center (marked with a crosshair) when location is off. It uses `data/deer_rules_2026.json`, built from the [2026 deer digest](https://www.michigan.gov/dnr/-/media/Project/Websites/dnr/Documents/LED/digests/2026_deer_regs_summary.pdf):

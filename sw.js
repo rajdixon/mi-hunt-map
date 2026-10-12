@@ -3,13 +3,21 @@
 // Land data: cache-first; a data refresh bumps VERSION to replace it.
 // Basemap tiles: areas saved from the Offline maps sheet (never trimmed),
 // plus tiles cached as you browse (up to MAX_TILES).
-const VERSION = "v5-2026-10-12";
+const VERSION = "v6-2026-10-12";
 const SHELL = `shell-${VERSION}`;
 const TILES = "tiles-v1";
 const MAX_TILES = 4000;
+const TILE_HOSTS = ["server.arcgisonline.com", "basemap.nationalmap.gov", "elevation.nationalmap.gov"];
+
+// LiDAR tiles are requested by bounding box; round it so a saved tile and
+// the map's request for the same tile share one cache key (same as app.js)
+function tileKey(url) {
+  return url.replace(/bbox=([^&]+)/, (_, b) =>
+    "bbox=" + decodeURIComponent(b).split(",").map(v => Math.round(+v)).join(","));
+}
 
 const SHELL_FILES = [
-  "./", "index.html", "style.css", "app.js", "rules.js", "pins.js", "manifest.webmanifest", "icon.svg", "icon-192.png",
+  "./", "index.html", "style.css", "app.js", "rules.js", "pins.js", "overlays.js", "manifest.webmanifest", "icon.svg", "icon-192.png",
   "data/meta.json", "data/state_forest.geojson", "data/state_wildlife.geojson", "data/state_parks.geojson",
   "data/hap.geojson", "data/commercial_forest.geojson", "data/national_forest.geojson",
   "data/counties.geojson", "data/dmu.geojson", "data/deer_rules_2026.json",
@@ -35,7 +43,7 @@ self.addEventListener("fetch", e => {
   const url = new URL(e.request.url);
   if (e.request.method !== "GET") return;
 
-  if (url.hostname === "server.arcgisonline.com") {
+  if (TILE_HOSTS.includes(url.hostname)) {
     // The page's "Save this area" downloads write their own cache
     if (e.request.cache === "no-store") return;
     e.respondWith(tile(e.request));
@@ -72,13 +80,14 @@ async function cacheFirst(req, url) {
 
 async function tile(req) {
   // Saved offline areas first, then tiles cached while browsing
-  const hit = await caches.match(req.url);
+  const key = tileKey(req.url);
+  const hit = await caches.match(key);
   if (hit) return hit;
   const cache = await caches.open(TILES);
   try {
     const res = await fetch(req);
     if (res.ok || res.type === "opaque") {
-      await cache.put(req, res.clone());
+      await cache.put(key, res.clone());
       trim(cache);
     }
     return res;

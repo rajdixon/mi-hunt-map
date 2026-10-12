@@ -25,15 +25,29 @@ const LAYERS = [
                 ["Notes", p.SpecialComment], ["Acres", p.acres && Math.round(p.acres)]] },
 ];
 
+const ESRI = "https://server.arcgisonline.com/ArcGIS/rest/services";
+const USGS = "https://basemap.nationalmap.gov/arcgis/rest/services";
+const ROADS_REF = { url: `${ESRI}/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}`, attr: "" };
+const PLACES_REF = { url: `${ESRI}/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}`, attr: "" };
+// fill: land-shading opacity that reads well on that background
 const BASEMAPS = {
-  topo: [{ url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}",
-           attr: "Esri, USGS, NOAA" }],
-  sat: [{ url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-          attr: "Esri, Maxar, Earthstar Geographics" },
-        { url: "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}",
-          attr: "" },
-        { url: "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
-          attr: "" }],
+  topo: { label: "Topo", fill: 0.32, layers: [
+    { url: `${ESRI}/World_Topo_Map/MapServer/tile/{z}/{y}/{x}`, attr: "Esri, USGS, NOAA" }] },
+  sat: { label: "Satellite", fill: 0.42, layers: [
+    { url: `${ESRI}/World_Imagery/MapServer/tile/{z}/{y}/{x}`, attr: "Esri, Maxar, Earthstar Geographics" },
+    ROADS_REF, PLACES_REF] },
+  // Light shading so the terrain stays visible through it
+  lidar: { label: "LiDAR terrain", fill: 0.16, layers: [
+    // USGS 3DEP bare-earth elevation (LiDAR where flown), lit from several directions
+    { url: "https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage" +
+           "?bbox={bbox-epsg-3857}&bboxSR=3857&imageSR=3857&size=256,256&format=jpgpng&f=image" +
+           "&renderingRule=%7B%22rasterFunction%22%3A%22Hillshade%20Multidirectional%22%7D",
+      attr: "USGS 3DEP", maxzoom: 17 },
+    ROADS_REF, PLACES_REF] },
+  usgs: { label: "USGS Topo", fill: 0.32, layers: [
+    { url: `${USGS}/USGSTopo/MapServer/tile/{z}/{y}/{x}`, attr: "USGS The National Map", maxzoom: 16 }] },
+  usgsImg: { label: "Imagery + Topo", fill: 0.42, layers: [
+    { url: `${USGS}/USGSImageryTopo/MapServer/tile/{z}/{y}/{x}`, attr: "USGS The National Map", maxzoom: 16 }] },
 };
 
 const store = {
@@ -44,6 +58,7 @@ const store = {
 const $ = id => document.getElementById(id);
 const data = {};          // id -> FeatureCollection with per-feature bbox
 let basemap = store.get("basemap", "topo");
+if (!BASEMAPS[basemap]) basemap = "topo";
 const visible = store.get("visible", Object.fromEntries(LAYERS.map(l => [l.id, true])));
 
 function link(url) {
@@ -68,23 +83,23 @@ map.addControl(new maplibregl.ScaleControl({ unit: "imperial" }), "bottom-left")
 function setBasemap(name) {
   basemap = name; store.set("basemap", name);
   for (const k of Object.keys(BASEMAPS)) {
-    BASEMAPS[k].forEach((_, i) => {
+    BASEMAPS[k].layers.forEach((_, i) => {
       const id = `bm-${k}-${i}`;
       if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", k === name ? "visible" : "none");
     });
   }
   document.querySelectorAll("[data-basemap]").forEach(b =>
     b.setAttribute("aria-checked", String(b.dataset.basemap === name)));
-  // Fills read better a bit stronger over imagery
+  // Land shading strength depends on the background
   for (const l of LAYERS) if (map.getLayer(l.id + "-fill"))
-    map.setPaintProperty(l.id + "-fill", "fill-opacity", name === "sat" ? 0.42 : 0.32);
+    map.setPaintProperty(l.id + "-fill", "fill-opacity", BASEMAPS[name].fill);
 }
 
 map.on("load", async () => {
-  for (const [k, tiles] of Object.entries(BASEMAPS)) {
-    tiles.forEach((t, i) => {
+  for (const [k, b] of Object.entries(BASEMAPS)) {
+    b.layers.forEach((t, i) => {
       const id = `bm-${k}-${i}`;
-      map.addSource(id, { type: "raster", tiles: [t.url], tileSize: 256, maxzoom: 19, attribution: t.attr });
+      map.addSource(id, { type: "raster", tiles: [t.url], tileSize: 256, maxzoom: t.maxzoom || 19, attribution: t.attr });
       map.addLayer({ id, type: "raster", source: id, layout: { visibility: "none" } });
     });
   }
@@ -125,6 +140,7 @@ map.on("load", async () => {
   setBasemap(basemap);
   buildLayerList();
   fetch("data/meta.json").then(r => r.json()).then(m => { $("data-date").textContent = m.updated; }).catch(() => {});
+  document.dispatchEvent(new Event("land-ready"));
 });
 
 map.on("moveend", () => {
@@ -137,24 +153,41 @@ map.on("moveend", () => {
 map.on("click", e => {
   if (typeof pinsSuppressClick === "function" && pinsSuppressClick()) return;
   const hits = hitsAt([e.lngLat.lng, e.lngLat.lat], true);
-  if (!hits.length) { closeSheet("sheet-info"); map.getSource("sel").setData(empty()); return; }
-  showInfo(hits[0], e.lngLat);
+  // Overlay features under the tap (stand, road, trail, section...), from overlays.js
+  const extras = typeof overlayHitsAt === "function" ? overlayHitsAt(e.point) : [];
+  if (!hits.length && !extras.length) { closeSheet("sheet-info"); map.getSource("sel").setData(empty()); return; }
+  showInfo(hits[0], e.lngLat, extras);
 });
 
-function showInfo({ layer, feature }, lngLat) {
-  const p = feature.properties || {};
-  $("info-kind").textContent = layer.name;
-  $("info-title").textContent = layer.title(p);
-  const dl = $("info-rows"); dl.replaceChildren();
-  for (const [k, v] of layer.rows(p)) {
+function fillRows(dl, rows) {
+  dl.replaceChildren();
+  for (const [k, v] of rows) {
     if (v == null || v === "" || (typeof v === "string" && !v.trim())) continue;
     const dt = document.createElement("dt"); dt.textContent = k;
     const dd = document.createElement("dd");
     if (v instanceof Node) dd.append(v); else dd.textContent = v;
     dl.append(dt, dd);
   }
+}
+
+function showInfo(hit, lngLat, extras = []) {
+  const main = hit ? { kind: hit.layer.name, title: hit.layer.title(hit.feature.properties || {}),
+                       rows: hit.layer.rows(hit.feature.properties || {}) } : extras.shift();
+  $("info-kind").textContent = main.kind;
+  $("info-title").textContent = main.title;
+  fillRows($("info-rows"), main.rows);
+  const more = $("info-extra"); more.replaceChildren();
+  for (const x of extras) {
+    const sec = document.createElement("div"); sec.className = "info-extra";
+    const k = document.createElement("div"); k.className = "kind"; k.textContent = x.kind;
+    const t = document.createElement("div"); t.className = "info-extra-title"; t.textContent = x.title;
+    const dl = document.createElement("dl"); dl.className = "rows";
+    fillRows(dl, x.rows);
+    sec.append(k, t, dl);
+    more.append(sec);
+  }
   $("info-coords").textContent = `${lngLat.lat.toFixed(5)}, ${lngLat.lng.toFixed(5)}`;
-  map.getSource("sel").setData(feature);
+  map.getSource("sel").setData(hit ? hit.feature : empty());
   openSheet("sheet-info");
 }
 
@@ -288,8 +321,14 @@ document.querySelectorAll("[data-close]").forEach(b =>
     closeSheet(b.dataset.close);
     if (b.dataset.close === "sheet-info") map.getSource("sel")?.setData(empty());
   }));
-document.querySelectorAll("[data-basemap]").forEach(b =>
-  b.addEventListener("click", () => setBasemap(b.dataset.basemap)));
+for (const [k, b] of Object.entries(BASEMAPS)) {
+  const btn = document.createElement("button");
+  btn.dataset.basemap = k; btn.setAttribute("role", "radio");
+  btn.setAttribute("aria-checked", String(k === basemap));
+  btn.textContent = b.label;
+  btn.addEventListener("click", () => setBasemap(k));
+  $("basemap-list").append(btn);
+}
 
 function buildLayerList() {
   const ul = $("layer-list"); ul.replaceChildren();
@@ -328,13 +367,29 @@ function lat2y(lat, z) {
 
 function tileUrls(bounds, basemapName) {
   const [w, s, e, n] = bounds, urls = [];
+  if (!BASEMAPS[basemapName]) return urls;
   for (let z = SAVE_MIN_Z; z <= SAVE_MAX_Z; z++) {
     const x0 = lng2x(w, z), x1 = lng2x(e, z), y0 = lat2y(n, z), y1 = lat2y(s, z);
     for (let x = x0; x <= x1; x++) for (let y = y0; y <= y1; y++)
-      for (const t of BASEMAPS[basemapName])
-        urls.push(t.url.replace("{z}", z).replace("{x}", x).replace("{y}", y));
+      for (const t of BASEMAPS[basemapName].layers)
+        if (z <= (t.maxzoom || 19)) urls.push(tileUrl(t.url, z, x, y));
   }
   return urls;
+}
+
+// Web Mercator extent of tile z/x/y, for image services (LiDAR) that take a bbox
+function tileUrl(tpl, z, x, y) {
+  if (!tpl.includes("{bbox-epsg-3857}"))
+    return tpl.replace("{z}", z).replace("{x}", x).replace("{y}", y);
+  const R = 20037508.342789244, size = 2 * R / 2 ** z;
+  const bbox = [-R + x * size, R - (y + 1) * size, -R + (x + 1) * size, R - y * size].join(",");
+  return tileKey(tpl.replace("{bbox-epsg-3857}", bbox));
+}
+
+// Same rounding the service worker uses, so saved bbox tiles match the map's requests
+function tileKey(url) {
+  return url.replace(/bbox=([^&]+)/, (_, b) =>
+    "bbox=" + decodeURIComponent(b).split(",").map(v => Math.round(+v)).join(","));
 }
 
 function viewBounds() {
@@ -360,7 +415,7 @@ function mb(tiles) { return Math.max(1, Math.round(tiles * AVG_TILE_KB / 1024));
 function renderEstimate() {
   if (saving) return;
   const n = tileUrls(viewBounds(), basemap).length;
-  const label = basemap === "sat" ? "Satellite" : "Topo";
+  const label = BASEMAPS[basemap].label;
   const box = $("save-estimate");
   if (n > SAVE_LIMIT) {
     box.className = "save-estimate warn";
@@ -385,7 +440,7 @@ function renderOffline() {
     main.innerHTML = `<span class="area-name"></span><span class="area-meta"></span>`;
     main.querySelector(".area-name").textContent = a.name;
     main.querySelector(".area-meta").textContent =
-      `${a.basemap === "sat" ? "Satellite" : "Topo"} · ${a.saved.toLocaleString()} tiles · ~${mb(a.saved)} MB · ${a.date}`;
+      `${BASEMAPS[a.basemap]?.label || a.basemap} · ${a.saved.toLocaleString()} tiles · ~${mb(a.saved)} MB · ${a.date}`;
     main.addEventListener("click", () => {
       closeSheet("sheet-offline");
       map.fitBounds([[a.bounds[0], a.bounds[1]], [a.bounds[2], a.bounds[3]]], { padding: 20 });
