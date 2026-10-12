@@ -21,6 +21,7 @@ const PIN_TYPES = {
   other:   { label: "Other", color: "#e5534b",
              svg: '<circle cx="12" cy="12" r="4.5"/>' },
 };
+const SHARE_BASE = "https://rajdixon.github.io/mi-hunt-map/";
 const LOG_KINDS = { sighting: "Sighting", shot: "Shot", harvest: "Harvest", nodeer: "No deer", note: "Note" };
 
 let pins = store.get("pins", []);
@@ -335,7 +336,8 @@ $("btn-log-save").addEventListener("click", async () => {
 $("btn-pin-share").addEventListener("click", async () => {
   const p = editing;
   const t = PIN_TYPES[p.type]?.label || "Pin";
-  const url = `${location.origin}${location.pathname}#pin=${p.lat.toFixed(5)},${p.lng.toFixed(5)},${p.type},${encodeURIComponent(p.name || "")}`;
+  // Links go to the public copy so people without a login to your server can open them
+  const url = `${SHARE_BASE}#pin=${p.lat.toFixed(5)},${p.lng.toFixed(5)},${p.type},${encodeURIComponent(p.name || "")}`;
   const text = `${p.name || t} (${t}): ${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}`;
   if (navigator.share) {
     try { await navigator.share({ title: p.name || t, text, url }); return; } catch (e) { if (e.name === "AbortError") return; }

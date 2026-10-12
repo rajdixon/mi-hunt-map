@@ -1,0 +1,14 @@
+[Unit]
+Description=MI Hunt Land (app + sync, behind Cloudflare Access)
+After=network-online.target
+
+[Service]
+WorkingDirectory=%h/mi-hunt-map
+Environment=PORT=8095
+EnvironmentFile=-%h/.config/mi-hunt.env
+ExecStart=/usr/bin/node %h/mi-hunt-map/server/server.mjs
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

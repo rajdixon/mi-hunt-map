@@ -364,3 +364,14 @@ body:has(.sheet:not([hidden])) .coords { opacity: 0; }
 .measure-read span { color: var(--ink-dim); font-size: 13px; }
 .measure-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .measure-actions button { padding: 9px 0; }
+
+/* Sync (sync.js) */
+.sync-status { margin: 10px 0 0; font-size: 13px; color: var(--ink-dim); }
+.sync-status[data-state="ok"]::before { content: "● "; color: var(--ok); }
+.sync-status[data-state="wait"]::before { content: "● "; color: #d4a63a; }
+.sync-status[data-state="login"] { color: #ff8a80; }
+.moved { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 16px; background: rgba(10, 14, 8, .78); }
+.moved-card { max-width: 420px; padding: 20px; border-radius: 18px; background: var(--panel); border: 1px solid var(--line); display: grid; gap: 12px; }
+.moved-card h2 { margin: 0; font: 700 26px/1.1 var(--display); }
+.moved-card p { margin: 0; }
+.moved-stay { justify-self: center; background: none; border: 0; color: var(--ink-dim); text-decoration: underline; font-size: 13px; padding: 6px; }

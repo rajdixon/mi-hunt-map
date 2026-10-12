@@ -1,0 +1,8 @@
+[Unit]
+Description=MI Hunt Land: pull the latest app and land data from GitHub
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/mi-hunt-map
+ExecStart=/usr/bin/git pull --ff-only --quiet
+ExecStartPost=/usr/bin/systemctl --user restart mi-hunt.service
