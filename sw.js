@@ -1,7 +1,7 @@
 // App shell + land data: cache-first, so the map works with no signal.
 // Basemap tiles: areas saved from the Offline maps sheet (never trimmed),
 // plus tiles cached as you browse (up to MAX_TILES).
-const VERSION = "v2-2026-10-12";
+const VERSION = "data-202610121758";
 const SHELL = `shell-${VERSION}`;
 const TILES = "tiles-v1";
 const MAX_TILES = 4000;
