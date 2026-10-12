@@ -13,6 +13,19 @@ Layers come from the Michigan DNR's ArcGIS open data. They use the same filters 
 | Commercial Forest | CommercialForestParcels_View | `ParcelStatusText = 'Active'` |
 | National Forest | USA Federal Lands 2025 | `Agency = 'Forest Service'`, clipped to Michigan |
 
+## Deer hunting hours and rules
+
+Tap the hours chip under the top bar. It shows legal hunting hours and the 2026 deer rules for your GPS position, or for the map center (marked with a crosshair) when location is off. It uses `data/deer_rules_2026.json`, built from the [2026 deer digest](https://www.michigan.gov/dnr/-/media/Project/Websites/dnr/Documents/LED/digests/2026_deer_regs_summary.pdf):
+
+- Hours: the Zone A table (pp. 36–37), plus 6, 12 or 18 minutes for zones B, C and D (p. 35), minus 1 hour in the four Central Time counties. County and DMU come from DNR boundary layers. Drummond Island (DMU 117) is Zone A; the rest of Chippewa County is Zone B.
+- Seasons by date and peninsula (pp. 6–10), antler point restrictions by DMU (pp. 12–15), universal antlerless use limits (pp. 17–19), baiting (pp. 56–58).
+
+**This file needs a yearly update** when the DNR publishes the next digest. The weekly data job does not change it.
+
+## Pins
+
+Stands, blinds, camp, parking and other spots. Pins are saved only in the phone's browser storage and never leave the device. Use Export GPX to back them up or move them to another phone.
+
 ## Run locally
 
     python3 -m http.server 8765

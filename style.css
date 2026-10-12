@@ -54,6 +54,28 @@ a { color: var(--blaze); }
 .status[data-state="wait"] .status-dot { background: var(--blaze); animation: pulse 1.2s infinite; }
 @keyframes pulse { 50% { opacity: .3; } }
 
+/* Hunting-hours chip */
+.hours-chip {
+  position: fixed; z-index: 5; left: 12px; top: calc(var(--safe-t) + 64px);
+  max-width: calc(100% - 24px);
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 14px 8px 10px; border-radius: 12px;
+  background: var(--panel); border: 1px solid var(--line); text-align: left;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .3);
+}
+.hours-chip svg { flex: none; width: 22px; height: 22px; fill: var(--ink-dim); stroke: var(--ink-dim); stroke-width: 2; stroke-linecap: round; }
+.hours-chip[data-state="open"] svg { fill: var(--ok); stroke: var(--ok); }
+.hours-chip[data-state="before"] svg { fill: var(--blaze); stroke: var(--blaze); }
+.chip-text { min-width: 0; display: grid; }
+.chip-main { font: 700 18px/1.1 var(--display); font-variant-numeric: tabular-nums; letter-spacing: .01em; }
+.chip-sub { font-size: 12.5px; color: var(--ink-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.crosshair { display: none; position: fixed; z-index: 3; left: 50%; top: calc((100% - var(--sheet-h, 0px)) / 2);
+  width: 30px; height: 30px; margin: -15px 0 0 -15px; pointer-events: none;
+  background: linear-gradient(var(--blaze), var(--blaze)) center / 2px 100% no-repeat,
+              linear-gradient(var(--blaze), var(--blaze)) center / 100% 2px no-repeat; }
+body.show-crosshair:has(#sheet-rules:not([hidden])) .crosshair { display: block; }
+
 /* Floating buttons */
 .fab-stack {
   position: fixed; right: 12px; z-index: 5;
@@ -82,6 +104,8 @@ a { color: var(--blaze); }
 }
 
 body:has(.sheet:not([hidden])) .coords { opacity: 0; }
+/* Phones: a docked sheet takes the bottom of the screen, so the side buttons step aside */
+@media (max-width: 699px) { body:has(.sheet:not([hidden])) :is(.fab-stack, .hours-chip) { display: none; } }
 @media (min-width: 700px) { body:has(.sheet:not([hidden])) .coords { opacity: 1; } }
 
 /* Bottom sheets */
@@ -143,6 +167,66 @@ body:has(.sheet:not([hidden])) .coords { opacity: 0; }
 .area-meta { display: block; font-size: 13px; color: var(--ink-dim); font-variant-numeric: tabular-nums; }
 .area-del { flex: none; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--line); background: none; font-size: 13px; }
 .area-del.confirm { border-color: var(--no); color: var(--no); }
+
+/* Rules sheet */
+.rules-meta { margin: 6px 0 0; font-size: 13px; color: var(--ink-dim); }
+.rule-sec { border-top: 1px solid var(--line); margin-top: 16px; }
+.rule-sec .sheet-sub { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.page-ref { font: 500 12px/1 var(--body); letter-spacing: 0; text-transform: none; color: var(--ink-dim); }
+.date-nav { display: flex; gap: 8px; align-items: center; }
+.date-step { flex: none; width: 44px; height: 42px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel-2); font-size: 24px; line-height: 1; }
+.date-step:disabled { opacity: .35; cursor: default; }
+.date-input { flex: 1; min-width: 0; height: 42px; padding: 0 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel-2); color: var(--ink); font: 600 15px var(--body); }
+.date-today { flex: none; height: 42px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--blaze); background: none; color: var(--blaze); font-weight: 600; }
+.hours-date { margin-top: 14px; font-weight: 600; }
+.hours-big { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
+.hours-col { padding: 12px 14px; border-radius: 12px; background: var(--panel-2); border: 1px solid var(--line); display: grid; gap: 2px; }
+.hours-col strong { font: 700 30px/1.05 var(--display); font-variant-numeric: tabular-nums; }
+.hours-label { font: 600 12px/1 var(--display); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-dim); }
+.live { margin-top: 10px; padding: 8px 12px; border-radius: 10px; font-weight: 600; background: var(--panel-2); border-left: 4px solid var(--ink-dim); }
+.live[data-state="open"] { border-left-color: var(--ok); }
+.live[data-state="before"] { border-left-color: var(--blaze); }
+.week-title { margin-top: 14px; font-size: 13px; color: var(--ink-dim); }
+.week { width: 100%; margin-top: 6px; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.week th { text-align: left; font: 600 12px/1 var(--display); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-dim); padding: 6px 0; }
+.week td { padding: 8px 0; border-top: 1px solid var(--line); }
+.week tbody tr { cursor: pointer; }
+.season-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.season-list li { display: grid; gap: 2px; }
+.season-dates, .season-note { font-size: 13px; color: var(--ink-dim); }
+.plain { margin: 0; max-width: 60ch; }
+.apr { padding: 10px 0; }
+.apr + .apr { border-top: 1px dashed var(--line); }
+.apr-license { font-weight: 600; }
+.apr-rows { margin: 6px 0 0; display: grid; grid-template-columns: minmax(90px, max-content) 1fr; gap: 4px 12px; font-size: 14px; }
+.apr-rows dt { color: var(--ink-dim); }
+.apr-rows dd { margin: 0; min-width: 0; }
+
+/* Pins */
+.pin { --pin: var(--blaze); background: none; border: 0; padding: 0; display: grid; justify-items: center; gap: 2px; cursor: pointer; }
+.pin-dot { --pin: inherit; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--pin); border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0, 0, 0, .45); flex: none; }
+.pin-dot svg { width: 18px; height: 18px; stroke: #fff; fill: #fff; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.pin-label { max-width: 120px; padding: 1px 6px; border-radius: 6px; font: 600 12px/1.3 var(--body); color: #fff;
+  background: rgba(29, 36, 25, .8); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pin-label:empty { display: none; }
+.pin-preview { width: 22px; height: 22px; border-radius: 50%; border: 3px dashed var(--blaze); background: rgba(255, 106, 19, .2); }
+.pin-add { margin-top: 14px; }
+.pin-list { list-style: none; margin: 12px 0 0; padding: 0; }
+.pin-list li + li { border-top: 1px solid var(--line); }
+.pin-row { width: 100%; display: flex; align-items: center; gap: 12px; padding: 10px 0; background: none; border: 0; text-align: left; }
+.pin-row-text { min-width: 0; display: grid; }
+.pin-row-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pin-row-meta { font-size: 13px; color: var(--ink-dim); font-variant-numeric: tabular-nums; }
+.pin-form { display: grid; gap: 14px; margin-top: 12px; }
+.pin-types { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+.pin-type { display: grid; justify-items: center; gap: 6px; padding: 10px 4px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel-2); font-size: 13px; font-weight: 600; }
+.pin-type[aria-checked="true"] { border-color: var(--blaze); box-shadow: inset 0 0 0 1px var(--blaze); }
+.field { display: grid; gap: 6px; font-size: 13px; color: var(--ink-dim); }
+.field input, .field textarea { font: 16px var(--body); color: var(--ink); background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; resize: vertical; }
+.pin-edit-extra { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.link-btn { flex: none; display: inline-block; text-decoration: none; color: var(--ink); text-align: center; padding: 8px 14px; }
+.pin-form .fine { margin: 0; }
 
 /* MapLibre tweaks */
 .maplibregl-ctrl-attrib { font-size: 10px; }

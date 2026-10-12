@@ -29,9 +29,19 @@
   </div>
 </header>
 
+<button id="hours-chip" class="hours-chip" hidden aria-label="Hunting hours and rules here">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" fill="none"/></svg>
+  <span class="chip-text"><span id="chip-main" class="chip-main"></span><span id="chip-sub" class="chip-sub"></span></span>
+</button>
+
+<div class="crosshair" aria-hidden="true"></div>
+
 <div class="fab-stack">
   <button id="btn-locate" class="fab" aria-label="Show my location" title="My location">
     <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8" fill="none"/></svg>
+  </button>
+  <button id="btn-pins" class="fab" aria-label="My pins" title="My pins">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6.5-6.2-6.5-11a6.5 6.5 0 0 1 13 0c0 4.8-6.5 11-6.5 11Z" fill="none"/><circle cx="12" cy="10" r="2.3"/></svg>
   </button>
   <button id="btn-offline" class="fab" aria-label="Offline maps" title="Offline maps">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5" fill="none"/><path d="M4 19h16" fill="none"/></svg>
@@ -79,6 +89,63 @@
   <p id="storage-note" class="fine"></p>
 </section>
 
+<section id="sheet-rules" class="sheet" hidden aria-label="Hunting hours and rules">
+  <div class="sheet-grip" aria-hidden="true"></div>
+  <div class="sheet-head">
+    <div>
+      <div class="kind">Deer · 2026 rules</div>
+      <h2 id="rules-title"></h2>
+      <p id="rules-meta" class="rules-meta"></p>
+    </div>
+    <button class="sheet-close" data-close="sheet-rules" aria-label="Close">×</button>
+  </div>
+  <div id="rules-body"></div>
+</section>
+
+<section id="sheet-pins" class="sheet" hidden aria-label="My pins">
+  <div class="sheet-grip" aria-hidden="true"></div>
+  <div class="sheet-head">
+    <h2>My pins</h2>
+    <button class="sheet-close" data-close="sheet-pins" aria-label="Close">×</button>
+  </div>
+  <p class="fine lead">Saved only on this phone. Tip: press and hold anywhere on the map to drop a pin there.</p>
+  <div class="save-actions pin-add">
+    <button id="btn-pin-gps" class="btn-primary">Pin my location</button>
+    <button id="btn-pin-center" class="btn-ghost">Pin map center</button>
+  </div>
+  <ul id="pin-list" class="pin-list"></ul>
+  <p id="pin-empty" class="fine">No pins yet. Mark your stands, blinds, camp and parking spots.</p>
+  <h3 class="sheet-sub">Backup</h3>
+  <div class="save-actions">
+    <button id="btn-pin-export" class="btn-ghost">Export GPX</button>
+    <button id="btn-pin-import" class="btn-ghost">Import GPX</button>
+  </div>
+  <input id="pin-file" type="file" accept=".gpx,application/gpx+xml,application/xml,text/xml" hidden>
+  <p id="pin-io-note" class="fine">GPX files also open in onX, HuntStand, Gaia and Google Earth.</p>
+</section>
+
+<section id="sheet-pin-edit" class="sheet" hidden aria-label="Edit pin">
+  <div class="sheet-grip" aria-hidden="true"></div>
+  <div class="sheet-head">
+    <h2 id="pin-edit-title">New pin</h2>
+    <button class="sheet-close" data-close="sheet-pin-edit" aria-label="Close">×</button>
+  </div>
+  <form id="pin-form" class="pin-form">
+    <div id="pin-types" class="pin-types" role="radiogroup" aria-label="Pin type"></div>
+    <label class="field"><span>Name</span><input id="pin-name" type="text" maxlength="60" placeholder="e.g. Ridge stand" autocomplete="off"></label>
+    <label class="field"><span>Notes</span><textarea id="pin-notes" rows="2" maxlength="500" placeholder="Wind direction, access route, etc."></textarea></label>
+    <p id="pin-coords" class="fine mono"></p>
+    <div class="save-actions">
+      <button type="submit" class="btn-primary">Save pin</button>
+      <button type="button" id="btn-pin-cancel" class="btn-ghost">Cancel</button>
+    </div>
+    <div class="pin-edit-extra">
+      <a id="pin-directions" class="btn-ghost link-btn" target="_blank" rel="noopener">Directions</a>
+      <button type="button" id="btn-pin-delete" class="area-del">Delete</button>
+    </div>
+  </form>
+</section>
+
 <section id="sheet-info" class="sheet" hidden aria-label="Parcel details">
   <div class="sheet-grip" aria-hidden="true"></div>
   <div class="sheet-head">
@@ -94,5 +161,7 @@
 
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script src="app.js"></script>
+<script src="rules.js"></script>
+<script src="pins.js"></script>
 </body>
 </html>

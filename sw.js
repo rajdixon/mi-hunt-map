@@ -1,15 +1,16 @@
 // App shell + land data: cache-first, so the map works with no signal.
 // Basemap tiles: areas saved from the Offline maps sheet (never trimmed),
 // plus tiles cached as you browse (up to MAX_TILES).
-const VERSION = "data-202610121758";
+const VERSION = "v4-2026-10-12";
 const SHELL = `shell-${VERSION}`;
 const TILES = "tiles-v1";
 const MAX_TILES = 4000;
 
 const SHELL_FILES = [
-  "./", "index.html", "style.css", "app.js", "manifest.webmanifest", "icon.svg", "icon-192.png",
+  "./", "index.html", "style.css", "app.js", "rules.js", "pins.js", "manifest.webmanifest", "icon.svg", "icon-192.png",
   "data/meta.json", "data/state_forest.geojson", "data/state_wildlife.geojson", "data/state_parks.geojson",
   "data/hap.geojson", "data/commercial_forest.geojson", "data/national_forest.geojson",
+  "data/counties.geojson", "data/dmu.geojson", "data/deer_rules_2026.json",
   "https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js",
   "https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css",
 ];

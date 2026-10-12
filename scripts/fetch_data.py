@@ -25,6 +25,9 @@ SOURCES = {
             ["HAPID", "COUNTY", "HuntType", "HAPPermit", "HAPInfo", "SpecialComment", "acres"], None),
     "commercial_forest": ("Commercial Forest - Huntable", ["CountyName", "Acres", "FullLegalName"], None),
     "national_forest": ("US Forest Service - Huntable", ["Unit_Name", "Link"], None),
+    # Reference layers for the hunt-rules panel (not drawn as huntable land)
+    "counties": ("Counties", ["Name", "Peninsula"], None),
+    "dmu": ("Deer Management Units", ["DeerManagementUnit", "MangementUnitName", "Year"], None),
 }
 
 OFFSET = 0.00008  # degrees, about 8 m: invisible at field zooms, cuts size a lot

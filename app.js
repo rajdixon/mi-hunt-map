@@ -135,6 +135,7 @@ map.on("moveend", () => {
 
 // ---------- Tap a parcel ----------
 map.on("click", e => {
+  if (typeof pinsSuppressClick === "function" && pinsSuppressClick()) return;
   const hits = hitsAt([e.lngLat.lng, e.lngLat.lat], true);
   if (!hits.length) { closeSheet("sheet-info"); map.getSource("sel").setData(empty()); return; }
   showInfo(hits[0], e.lngLat);
@@ -227,6 +228,7 @@ function onFix(pos) {
   if (first) map.flyTo({ center: lastFix, zoom: Math.max(map.getZoom(), 14), speed: 1.6 });
   else if (follow) map.easeTo({ center: lastFix, duration: 600 });
 
+  if (typeof refreshRules === "function") refreshRules();
   const hits = hitsAt(lastFix, false);
   if (hits.length) setStatus("in", `On ${hits[0].layer.name}`);
   else setStatus("out", "Not on mapped public land");
@@ -263,7 +265,10 @@ document.querySelectorAll(".sheet").forEach(s => sheetObserver.observe(s));
 function liftButtons() {
   const open = [...document.querySelectorAll(".sheet")].find(s => !s.hidden);
   const docked = open && innerWidth < 700;
-  document.documentElement.style.setProperty("--sheet-h", docked ? open.offsetHeight + "px" : "0px");
+  const h = docked ? open.offsetHeight : 0;
+  document.documentElement.style.setProperty("--sheet-h", h + "px");
+  // Keep the map's center in the visible area above the sheet (the rules panel reads it)
+  if (map.getPadding().bottom !== h) map.setPadding({ top: 0, left: 0, right: 0, bottom: h });
 }
 function openSheet(id) {
   for (const s of document.querySelectorAll(".sheet")) s.hidden = s.id !== id;
