@@ -105,7 +105,7 @@ body.show-crosshair:has(#sheet-rules:not([hidden])) .crosshair { display: block;
 
 body:has(.sheet:not([hidden])) .coords { opacity: 0; }
 /* Phones: a docked sheet takes the bottom of the screen, so the side buttons step aside */
-@media (max-width: 699px) { body:has(.sheet:not([hidden])) :is(.fab-stack, .hours-chip) { display: none; } }
+@media (max-width: 699px) { body:has(.sheet:not([hidden])) :is(.fab-stack, .hours-chip, .rec-pill) { display: none; } }
 @media (min-width: 700px) { body:has(.sheet:not([hidden])) .coords { opacity: 1; } }
 
 /* Bottom sheets */
@@ -234,6 +234,81 @@ body:has(.sheet:not([hidden])) .coords { opacity: 0; }
 .pin-edit-extra { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 .link-btn { flex: none; display: inline-block; text-decoration: none; color: var(--ink); text-align: center; padding: 8px 14px; }
 .pin-form .fine { margin: 0; }
+
+/* Top-bar search */
+.top-btn { flex: none; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--panel-2); border: 1px solid var(--line); margin-left: auto; }
+.top-btn svg { width: 20px; height: 20px; stroke: var(--ink); stroke-width: 2.4; stroke-linecap: round; }
+.top-btn + .status { margin-left: 0; }
+.search-form { display: flex; gap: 8px; margin-top: 12px; }
+.search-form input { flex: 1; min-width: 0; font: 16px var(--body); color: var(--ink); background: var(--panel-2);
+  border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+.search-form .btn-primary { flex: none; padding: 10px 16px; }
+.search-results { list-style: none; margin: 10px 0 0; padding: 0; }
+.search-results li + li { border-top: 1px solid var(--line); }
+.search-row { width: 100%; display: grid; gap: 2px; padding: 10px 0; background: none; border: 0; text-align: left; }
+.search-label { font-weight: 600; }
+.search-kind { font-size: 13px; color: var(--ink-dim); }
+
+/* Track recording pill */
+.rec-pill { position: fixed; z-index: 5; left: 12px; top: calc(var(--safe-t) + 132px); max-width: calc(100% - 90px);
+  display: flex; align-items: center; gap: 10px; padding: 8px 14px 8px 12px; border-radius: 12px; text-align: left;
+  background: var(--panel); border: 1px solid var(--blaze); box-shadow: 0 4px 14px rgba(0, 0, 0, .3); }
+.rec-dot { flex: none; width: 12px; height: 12px; border-radius: 50%; background: #e5534b; animation: pulse 1.4s infinite; }
+.hours-chip[hidden] + .rec-pill { top: calc(var(--safe-t) + 64px); }
+.track-status { display: grid; gap: 6px; margin: 12px 0; }
+.track-live { font: 700 18px/1.2 var(--display); color: var(--blaze); }
+.track-back { font-weight: 600; }
+.track-item { display: grid !important; gap: 8px; }
+.track-actions { display: flex; gap: 8px; }
+
+/* Wind */
+.wind-card { margin-top: 10px; padding: 12px; border-radius: 12px; background: var(--panel-2); border: 1px solid var(--line); display: grid; gap: 10px; }
+.wind-card .fine { margin: 0; }
+.wind-now { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.wind-now strong { font: 700 22px/1 var(--display); }
+.wind-sky { color: var(--ink-dim); font-size: 14px; }
+.wind-arrow { display: inline-block; font-size: 20px; line-height: 1; color: var(--blaze); font-weight: 700; }
+.wind-strip { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
+.wind-hour { flex: none; min-width: 44px; display: grid; justify-items: center; gap: 2px; padding: 6px 4px;
+  border-radius: 8px; background: var(--panel); font-size: 12px; font-variant-numeric: tabular-nums; }
+.wind-hour .wind-arrow { font-size: 16px; }
+.wind-h { color: var(--ink-dim); }
+.wind-mph { font-weight: 600; }
+.wind-calm { font-size: 11px; color: var(--ink-dim); padding-top: 8px; }
+.wind-badge { margin-left: auto; flex: none; font-size: 12px; font-weight: 600; padding: 4px 8px; border-radius: 999px;
+  border: 1px solid var(--no); color: var(--no); }
+.wind-badge[data-ok="true"] { border-color: var(--ok); color: var(--ok); }
+.wind-chips { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; }
+.wind-chip { padding: 9px 0; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-2); font-weight: 600; font-size: 13px; color: var(--ink); }
+.wind-chip[aria-pressed="true"] { background: var(--ok); border-color: var(--ok); color: #10200f; }
+.good-windows { margin: 4px 0 0; color: var(--ink); }
+.backup-row { margin-top: 8px; }
+
+/* Hunt log */
+.pin-log { margin-top: 18px; border-top: 1px solid var(--line); }
+.log-title { display: flex; justify-content: space-between; align-items: center; }
+.small-btn { flex: none; padding: 7px 12px; margin-top: 10px; }
+.log-form { display: grid; gap: 12px; margin-bottom: 12px; padding: 12px; border-radius: 12px; background: var(--panel-2); }
+.log-form .field input { background: var(--panel); }
+.log-kinds { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.log-kind-btn { padding: 9px 0; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); font-weight: 600; font-size: 13px; color: var(--ink); }
+.log-kind-btn[aria-checked="true"] { background: var(--blaze); border-color: var(--blaze); color: #fff; }
+.log-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.log-row .field { min-width: 0; }
+.log-row input { min-width: 0; width: 100%; }
+.log-list { list-style: none; margin: 0; padding: 0; }
+.log-item { padding: 10px 0; border-top: 1px solid var(--line); display: grid; gap: 4px; }
+.log-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; }
+.log-kind { font: 600 12px/1 var(--display); letter-spacing: .08em; text-transform: uppercase; padding: 4px 7px; border-radius: 6px; background: var(--panel-2); }
+.log-harvest { background: var(--blaze); color: #fff; }
+.log-shot { border: 1px solid var(--blaze); }
+.log-sighting { border: 1px solid var(--ok); }
+.log-time { font-variant-numeric: tabular-nums; }
+.log-wind { color: var(--ink-dim); }
+.log-del { margin-left: auto; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--line); background: none; font-size: 12px; }
+.log-del.confirm { border-color: var(--no); color: var(--no); }
+.log-text { max-width: 60ch; }
 
 /* MapLibre tweaks */
 .maplibregl-ctrl-attrib { font-size: 10px; }

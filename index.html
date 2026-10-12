@@ -23,6 +23,9 @@
     <span class="brand-mark" aria-hidden="true"></span>
     <span class="brand-name">MI Hunt Land</span>
   </div>
+  <button id="btn-search" class="top-btn" aria-label="Search" title="Search">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" fill="none"/><path d="m15.5 15.5 5 5" fill="none"/></svg>
+  </button>
   <div id="status" class="status" data-state="off" role="status" aria-live="polite">
     <span class="status-dot" aria-hidden="true"></span>
     <span id="status-text">Tap ◎ to check your spot</span>
@@ -34,6 +37,11 @@
   <span class="chip-text"><span id="chip-main" class="chip-main"></span><span id="chip-sub" class="chip-sub"></span></span>
 </button>
 
+<button id="rec-pill" class="rec-pill" hidden aria-label="Track recording">
+  <span class="rec-dot" aria-hidden="true"></span>
+  <span class="chip-text"><span id="rec-main" class="chip-main"></span><span id="rec-sub" class="chip-sub"></span></span>
+</button>
+
 <div class="crosshair" aria-hidden="true"></div>
 
 <div class="fab-stack">
@@ -42,6 +50,9 @@
   </button>
   <button id="btn-pins" class="fab" aria-label="My pins" title="My pins">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6.5-6.2-6.5-11a6.5 6.5 0 0 1 13 0c0 4.8-6.5 11-6.5 11Z" fill="none"/><circle cx="12" cy="10" r="2.3"/></svg>
+  </button>
+  <button id="btn-tracks" class="fab" aria-label="Tracks" title="Track my walk">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19c3-1 4-4 7-4s3 3 6 2 3-6 3-9" fill="none" stroke-dasharray="2.5 2.5"/><circle cx="4" cy="19" r="2"/><circle cx="20" cy="6" r="2"/></svg>
   </button>
   <button id="btn-offline" class="fab" aria-label="Offline maps" title="Offline maps">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5" fill="none"/><path d="M4 19h16" fill="none"/></svg>
@@ -108,6 +119,7 @@
     <h2>My pins</h2>
     <button class="sheet-close" data-close="sheet-pins" aria-label="Close">×</button>
   </div>
+  <div id="wind-card" class="wind-card"></div>
   <p class="fine lead">Saved only on this phone. Tip: press and hold anywhere on the map to drop a pin there.</p>
   <div class="save-actions pin-add">
     <button id="btn-pin-gps" class="btn-primary">Pin my location</button>
@@ -117,11 +129,14 @@
   <p id="pin-empty" class="fine">No pins yet. Mark your stands, blinds, camp and parking spots.</p>
   <h3 class="sheet-sub">Backup</h3>
   <div class="save-actions">
-    <button id="btn-pin-export" class="btn-ghost">Export GPX</button>
-    <button id="btn-pin-import" class="btn-ghost">Import GPX</button>
+    <button id="btn-backup-export" class="btn-ghost">Full backup</button>
+    <button id="btn-pin-import" class="btn-ghost">Import</button>
   </div>
-  <input id="pin-file" type="file" accept=".gpx,application/gpx+xml,application/xml,text/xml" hidden>
-  <p id="pin-io-note" class="fine">GPX files also open in onX, HuntStand, Gaia and Google Earth.</p>
+  <div class="save-actions backup-row">
+    <button id="btn-pin-export" class="btn-ghost">Pins as GPX</button>
+  </div>
+  <input id="pin-file" type="file" accept=".gpx,.json,application/gpx+xml,application/json,application/xml,text/xml" hidden>
+  <p id="pin-io-note" class="fine">Full backup saves pins, hunt logs and tracks. GPX opens in onX, HuntStand, Gaia and Google Earth.</p>
 </section>
 
 <section id="sheet-pin-edit" class="sheet" hidden aria-label="Edit pin">
@@ -130,10 +145,15 @@
     <h2 id="pin-edit-title">New pin</h2>
     <button class="sheet-close" data-close="sheet-pin-edit" aria-label="Close">×</button>
   </div>
+  <p id="pin-shared-note" class="fine lead" hidden>Someone shared this spot with you. Save it to add it to your pins.</p>
   <form id="pin-form" class="pin-form">
     <div id="pin-types" class="pin-types" role="radiogroup" aria-label="Pin type"></div>
     <label class="field"><span>Name</span><input id="pin-name" type="text" maxlength="60" placeholder="e.g. Ridge stand" autocomplete="off"></label>
-    <label class="field"><span>Notes</span><textarea id="pin-notes" rows="2" maxlength="500" placeholder="Wind direction, access route, etc."></textarea></label>
+    <label class="field"><span>Notes</span><textarea id="pin-notes" rows="2" maxlength="500" placeholder="Access route, shooting lanes, etc."></textarea></label>
+    <div class="field"><span>Good winds (where the wind comes from)</span>
+      <div id="pin-winds" class="wind-chips"></div>
+      <p id="pin-good-windows" class="fine good-windows"></p>
+    </div>
     <p id="pin-coords" class="fine mono"></p>
     <div class="save-actions">
       <button type="submit" class="btn-primary">Save pin</button>
@@ -141,9 +161,67 @@
     </div>
     <div class="pin-edit-extra">
       <a id="pin-directions" class="btn-ghost link-btn" target="_blank" rel="noopener">Directions</a>
+      <button type="button" id="btn-pin-share" class="btn-ghost link-btn">Share</button>
       <button type="button" id="btn-pin-delete" class="area-del">Delete</button>
     </div>
+    <p id="share-note" class="fine"></p>
   </form>
+  <section id="pin-log" class="pin-log">
+    <div class="log-title">
+      <h3 class="sheet-sub">Hunt log</h3>
+      <button type="button" id="btn-log-add" class="btn-ghost small-btn">Add entry</button>
+    </div>
+    <div id="log-form" class="log-form" hidden>
+      <div class="log-kinds" role="radiogroup" aria-label="Entry type">
+        <button type="button" class="log-kind-btn" data-kind="sighting" role="radio">Sighting</button>
+        <button type="button" class="log-kind-btn" data-kind="shot" role="radio">Shot</button>
+        <button type="button" class="log-kind-btn" data-kind="harvest" role="radio">Harvest</button>
+        <button type="button" class="log-kind-btn" data-kind="note" role="radio">Note</button>
+      </div>
+      <label class="field"><span>What happened</span><input id="log-text" type="text" maxlength="200" placeholder="e.g. 2 does and a 6-point at 7:40, came from the swamp" autocomplete="off"></label>
+      <div class="log-row">
+        <label class="field"><span>When</span><input id="log-time" type="datetime-local"></label>
+        <label class="field"><span>Wind / weather</span><input id="log-wind" type="text" maxlength="60" placeholder="NW 8 mph, 41°F" autocomplete="off"></label>
+      </div>
+      <div class="save-actions">
+        <button type="button" id="btn-log-save" class="btn-primary">Save entry</button>
+        <button type="button" id="btn-log-cancel" class="btn-ghost">Cancel</button>
+      </div>
+    </div>
+    <ul id="log-list" class="log-list"></ul>
+    <p id="log-empty" class="fine">No entries yet. Log sightings, shots and harvests here to see what this spot does over the seasons.</p>
+  </section>
+</section>
+
+<section id="sheet-tracks" class="sheet" hidden aria-label="Tracks">
+  <div class="sheet-grip" aria-hidden="true"></div>
+  <div class="sheet-head">
+    <h2>Tracks</h2>
+    <button class="sheet-close" data-close="sheet-tracks" aria-label="Close">×</button>
+  </div>
+  <p class="fine lead">Record your walk in, then follow the orange line back. The green dot is where you started.</p>
+  <div id="track-status" class="track-status"></div>
+  <div class="save-actions">
+    <button id="btn-track-start" class="btn-primary">Start recording</button>
+    <button id="btn-track-stop" class="btn-primary" hidden>Stop and save</button>
+  </div>
+  <h3 class="sheet-sub">Saved tracks</h3>
+  <ul id="track-list" class="area-list"></ul>
+  <p id="track-empty" class="fine">No saved tracks yet.</p>
+</section>
+
+<section id="sheet-search" class="sheet" hidden aria-label="Search">
+  <div class="sheet-grip" aria-hidden="true"></div>
+  <div class="sheet-head">
+    <h2>Search</h2>
+    <button class="sheet-close" data-close="sheet-search" aria-label="Close">×</button>
+  </div>
+  <form id="search-form" class="search-form" role="search">
+    <input id="search-input" type="search" placeholder="Game area, town, pin, T29N R2W S23, 44.66 -84.71" autocomplete="off" enterkeyhint="search">
+    <button type="submit" class="btn-primary">Search</button>
+  </form>
+  <ul id="search-results" class="search-results"></ul>
+  <p id="search-note" class="fine">Find public land by name, your pins, counties, DMUs, a township and section, or coordinates. Towns and places need a signal.</p>
 </section>
 
 <section id="sheet-info" class="sheet" hidden aria-label="Parcel details">
@@ -163,7 +241,10 @@
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script src="app.js"></script>
 <script src="rules.js"></script>
+<script src="weather.js"></script>
 <script src="pins.js"></script>
+<script src="tracks.js"></script>
 <script src="overlays.js"></script>
+<script src="search.js"></script>
 </body>
 </html>

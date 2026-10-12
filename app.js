@@ -249,6 +249,8 @@ $("btn-locate").addEventListener("click", () => {
 });
 
 map.on("dragstart", () => { follow = false; });
+// Jumping somewhere on purpose (search, a pin, a saved track) stops following GPS
+function stopFollowing() { follow = false; }
 
 function onFix(pos) {
   const { longitude: lng, latitude: lat, accuracy } = pos.coords;
@@ -262,6 +264,7 @@ function onFix(pos) {
   else if (follow) map.easeTo({ center: lastFix, duration: 600 });
 
   if (typeof refreshRules === "function") refreshRules();
+  if (typeof trackOnFix === "function") trackOnFix(pos);
   const hits = hitsAt(lastFix, false);
   if (hits.length) setStatus("in", `On ${hits[0].layer.name}`);
   else setStatus("out", "Not on mapped public land");
@@ -443,6 +446,7 @@ function renderOffline() {
       `${BASEMAPS[a.basemap]?.label || a.basemap} · ${a.saved.toLocaleString()} tiles · ~${mb(a.saved)} MB · ${a.date}`;
     main.addEventListener("click", () => {
       closeSheet("sheet-offline");
+      stopFollowing();
       map.fitBounds([[a.bounds[0], a.bounds[1]], [a.bounds[2], a.bounds[3]]], { padding: 20 });
     });
     const del = document.createElement("button");

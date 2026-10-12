@@ -28,9 +28,21 @@ Tap the hours chip under the top bar. It shows legal hunting hours and the 2026 
 
 **This file needs a yearly update** when the DNR publishes the next digest. The weekly data job does not change it.
 
-## Pins
+## Pins, wind and hunt log
 
-Stands, blinds, camp, parking and other spots. Pins are saved only in the phone's browser storage and never leave the device. Use Export GPX to back them up or move them to another phone.
+Stands, blinds, camp, parking and other spots, saved only in the phone's browser storage. Each pin can have good winds (8 directions) and a hunt log (sightings, shots, harvests, notes with time and wind).
+
+- Wind: hourly NWS forecast (api.weather.gov), cached per ~4 km for an hour and kept for offline viewing. Pins show "Good wind / Wrong wind" now, and the editor lists the next good-wind stretches trimmed to legal hunting hours.
+- Share: sends name, type and location in the link's `#fragment` (never sent to the server). Notes, winds and logs are not shared. Opening the link offers to save the pin.
+- Backup: "Full backup" saves pins, logs and tracks as JSON; "Pins as GPX" for other apps. Import takes either.
+
+## Tracks
+
+Records the GPS trail while the app is open and shows distance and direction back to the start. Requests a screen wake lock while recording, because phones pause GPS for web apps when the screen locks. Saved tracks can be shown, hidden, exported as GPX or deleted.
+
+## Search
+
+Coordinates (decimal or degrees-minutes), pins, public land names, counties, DMUs, township/range/section (DNR PLSS service, needs signal) and places (OpenStreetMap Nominatim, on submit only, needs signal).
 
 ## Run locally
 
