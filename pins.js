@@ -69,10 +69,23 @@ function distMeters(a, b) {
   const h = Math.sin(dLat / 2) ** 2 + Math.cos(a[1] * r) * Math.cos(b[1] * r) * Math.sin(dLng / 2) ** 2;
   return 2 * R * Math.asin(Math.sqrt(h));
 }
+// Distances in the units picked in Settings: yards and miles (default),
+// feet and miles, or metres and kilometres
+const units = () => (typeof settings !== "undefined" && settings.units) || "yd";
 function fmtDist(m) {
-  const yd = m * 1.0936;
-  return yd < 1000 ? `${Math.round(yd)} yd` : `${(m / 1609.34).toFixed(m < 16093 ? 1 : 0)} mi`;
+  const u = units();
+  if (u === "m") return m < 1000 ? `${Math.round(m)} m` : `${(m / 1000).toFixed(m < 10000 ? 1 : 0)} km`;
+  if (u === "ft" && m < 402.34) return `${Math.round(m * 3.28084)} ft`;   // under a quarter mile
+  if (u === "yd" && m < 914.4) return `${Math.round(m * 1.0936)} yd`;
+  return `${(m / 1609.34).toFixed(m < 16093 ? (m < 1609.34 ? 2 : 1) : 0)} mi`;
 }
+// Walks and tracks: miles or kilometres with two decimals
+const fmtTrip = m => units() === "m" ? `${(m / 1000).toFixed(2)} km` : `${(m / 1609.34).toFixed(2)} mi`;
+const fmtArea = m2 => units() === "m"
+  ? `${(m2 / 10000).toFixed(m2 < 100000 ? 2 : 1)} ha`
+  : `${(m2 / 4046.86).toFixed(m2 < 40468 ? 2 : 1)} acres`;
+// GPS accuracy, short
+const fmtAcc = m => units() === "m" ? `±${Math.round(m)} m` : `±${Math.round(m * 3.281)} ft`;
 function bearing(a, b) {
   const r = Math.PI / 180, y = Math.sin((b[0] - a[0]) * r) * Math.cos(b[1] * r);
   const x = Math.cos(a[1] * r) * Math.sin(b[1] * r) - Math.sin(a[1] * r) * Math.cos(b[1] * r) * Math.cos((b[0] - a[0]) * r);

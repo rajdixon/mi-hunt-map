@@ -73,6 +73,7 @@ function startRecording() {
   rec = { id: newId(), start: Date.now(), points: lastFix ? [[lastFix[0], lastFix[1], Date.now()]] : [] };
   saveRec();
   resumeRecording();
+  refreshWatch();
 }
 
 function resumeRecording() {
@@ -116,6 +117,7 @@ function stopRecording() {
   drawRec();
   drawSavedTracks();
   renderRecPill();
+  refreshWatch();
 }
 
 function renderRecPill() {
@@ -128,7 +130,7 @@ function renderRecPill() {
     const s = rec.points[0];
     back = `Start ${fmtDist(distMeters(lastFix, s))} ${bearing(lastFix, s)}`;
   }
-  $("rec-main").textContent = `${(dist / 1609.34).toFixed(2)} mi · ${fmtDur(Date.now() - rec.start)}`;
+  $("rec-main").textContent = `${fmtTrip(dist)} · ${fmtDur(Date.now() - rec.start)}`;
   $("rec-sub").textContent = back;
   if (!$("sheet-tracks").hidden) renderTrackSheet();
 }
@@ -140,7 +142,7 @@ function renderTrackSheet() {
   st.replaceChildren();
   if (rec) {
     const dist = trackDist(rec.points);
-    st.append(el("div", "track-live", `Recording · ${(dist / 1609.34).toFixed(2)} mi · ${fmtDur(Date.now() - rec.start)}`));
+    st.append(el("div", "track-live", `Recording · ${fmtTrip(dist)} · ${fmtDur(Date.now() - rec.start)}`));
     if (lastFix && rec.points.length) {
       const s = rec.points[0];
       st.append(el("div", "track-back", `Back to start: ${fmtDist(distMeters(lastFix, s))} ${bearing(lastFix, s)} in a straight line`));
@@ -156,7 +158,7 @@ function renderTrackSheet() {
     const li = el("li", "track-item");
     const main = el("button", "area-main");
     main.append(el("span", "area-name", t.name),
-      el("span", "area-meta", `${(t.dist / 1609.34).toFixed(2)} mi · ${fmtDur(t.end - t.start)}`));
+      el("span", "area-meta", `${fmtTrip(t.dist)} · ${fmtDur(t.end - t.start)}`));
     main.addEventListener("click", () => {
       shownTracks.add(t.id); saveTracks(); drawSavedTracks();
       const xs = t.points.map(p => p[0]), ys = t.points.map(p => p[1]);

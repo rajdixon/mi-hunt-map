@@ -24,10 +24,9 @@ function shapeLength(pts) {
   for (let i = 1; i < pts.length; i++) d += distMeters(pts[i - 1], pts[i]);
   return d;
 }
-const fmtAcres = m2 => `${(m2 / 4046.86).toFixed(m2 < 40468 ? 2 : 1)} acres`;
 function shapeSize(s) {
   return s.kind === "area"
-    ? `${fmtAcres(areaM2(s.pts))} · ${fmtLen(shapeLength([...s.pts, s.pts[0]]))} around`
+    ? `${fmtArea(areaM2(s.pts))} · ${fmtLen(shapeLength([...s.pts, s.pts[0]]))} around`
     : fmtLen(shapeLength(s.pts));
 }
 function shapeGeom(s) {
@@ -136,7 +135,7 @@ function renderDrawBar() {
   document.querySelectorAll(".draw-mode").forEach(b => b.setAttribute("aria-checked", String(b.dataset.kind === drawing.kind)));
   const p = drawing.pts, need = drawing.kind === "area" ? 3 : 2;
   $("draw-main").textContent = p.length < need ? `Tap ${need - p.length} more point${need - p.length === 1 ? "" : "s"}`
-    : drawing.kind === "area" ? fmtAcres(areaM2(p)) : fmtLen(shapeLength(p));
+    : drawing.kind === "area" ? fmtArea(areaM2(p)) : fmtLen(shapeLength(p));
   $("draw-sub").textContent = p.length < need
     ? (drawing.kind === "area" ? "Tap around the edge of the area." : "Tap along the line, start to end.")
     : drawing.kind === "area" ? `${fmtLen(shapeLength([...p, p[0]]))} around · tap Done when it's closed` : `${p.length} points · tap Done to name it`;

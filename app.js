@@ -78,7 +78,8 @@ const map = new maplibregl.Map({
   dragRotate: false, pitchWithRotate: false,
 });
 map.touchZoomRotate.disableRotation();
-map.addControl(new maplibregl.ScaleControl({ unit: "imperial" }), "bottom-left");
+const scaleControl = new maplibregl.ScaleControl({ unit: "imperial" });
+map.addControl(scaleControl, "bottom-left");
 
 function setBasemap(name) {
   basemap = name; store.set("basemap", name);
@@ -249,9 +250,37 @@ $("btn-locate").addEventListener("click", () => {
   if (!("geolocation" in navigator)) return setStatus("off", "Location not available on this device");
   setStatus("wait", "Finding you…");
   $("btn-locate").setAttribute("aria-pressed", "true");
-  watchId = navigator.geolocation.watchPosition(onFix, onFixError,
-    { enableHighAccuracy: true, maximumAge: 5000, timeout: 30000 });
+  startWatch();
 });
+
+// GPS runs constantly, or, with Battery saver on, once a minute. Recording a
+// track and Go to always get full speed.
+let pollTimer = null;
+const SAVER_MS = 60000;
+function gpsSaver() {
+  return typeof settings !== "undefined" && settings.saver
+    && !(typeof rec !== "undefined" && rec) && !(typeof goTarget !== "undefined" && goTarget);
+}
+function startWatch() {
+  if (gpsSaver()) {
+    watchId = "poll";
+    const once = () => navigator.geolocation.getCurrentPosition(onFix, onFixError, { enableHighAccuracy: true, maximumAge: 20000, timeout: 30000 });
+    once();
+    pollTimer = setInterval(once, SAVER_MS);
+  } else {
+    watchId = navigator.geolocation.watchPosition(onFix, onFixError, { enableHighAccuracy: true, maximumAge: 5000, timeout: 30000 });
+  }
+}
+function stopWatch() {
+  if (watchId === "poll") clearInterval(pollTimer);
+  else if (watchId != null) navigator.geolocation.clearWatch(watchId);
+  watchId = null;
+}
+// After Battery saver, recording or Go to changes: switch GPS mode if it's on
+function refreshWatch() {
+  if (watchId == null || (watchId === "poll") === gpsSaver()) return;
+  stopWatch(); startWatch();
+}
 
 map.on("dragstart", () => { follow = false; });
 // Jumping somewhere on purpose (search, a pin, a saved track) stops following GPS
@@ -277,14 +306,14 @@ function onFix(pos) {
   else setStatus("out", "Not on mapped public land");
   const c = $("coords");
   c.hidden = false;
-  c.textContent = `${lat.toFixed(5)}, ${lng.toFixed(5)}  ±${Math.round(accuracy * 3.281)} ft`;
+  c.textContent = `${lat.toFixed(5)}, ${lng.toFixed(5)}  ${typeof fmtAcc === "function" ? fmtAcc(accuracy) : `±${Math.round(accuracy * 3.281)} ft`}`;
 }
 
 function onFixError(err) {
   const msg = err.code === 1 ? "Location blocked. Allow it in browser settings"
             : err.code === 3 ? "Still looking for GPS…" : "Can't get location";
   setStatus(err.code === 3 ? "wait" : "off", msg);
-  if (err.code === 1) { navigator.geolocation.clearWatch(watchId); watchId = null; $("btn-locate").setAttribute("aria-pressed", "false"); }
+  if (err.code === 1) { stopWatch(); $("btn-locate").setAttribute("aria-pressed", "false"); }
 }
 
 function setStatus(state, text) {

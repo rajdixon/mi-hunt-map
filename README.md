@@ -98,7 +98,7 @@ Set `HUNT_GROUP` in `~/.config/mi-hunt.env` on webserver02 to the partners' emai
 
 ## Settings and the user guide
 
-The gear in the top bar opens Settings (`settings.js`, saved per phone): text size (scales panels, buttons and labels with CSS `zoom`, not the map), night mode (a red multiply overlay), keep the screen on (Wake Lock), names on the map, and the walking pace used by Go to. The user guide is `docs/MI-Hunt-Land-Guide.pdf`, linked from Settings.
+The gear in the top bar opens Settings (`settings.js`, saved per phone): text size (scales panels, buttons and labels with CSS `zoom`, not the map), distance units (yards/miles, feet/miles or metres/km, with acres or hectares), night mode (a red multiply overlay), keep the screen on (Wake Lock), battery saver (GPS polled once a minute and partner location every 2 minutes, except while recording or using Go to), names on the map, and the walking pace used by Go to. The user guide is `docs/MI-Hunt-Land-Guide.pdf`, linked from Settings.
 
 ## Photos and backups
 

@@ -204,15 +204,18 @@ function pollWhere() {
     if (whereShare && lastFix) { lastWherePost = Date.now(); whereCall("POST", { lng: lastFix[0], lat: lastFix[1], acc: lastAcc }); }
     else whereCall("GET");
   }
-  whereTimer = setTimeout(pollWhere, 30000);
+  whereTimer = setTimeout(pollWhere, wherePeriod());
 }
 function stopWhere() { clearTimeout(whereTimer); partnerWhere = []; drawWhere(); }
+
+// Every 30 seconds, or 2 minutes with Battery saver on
+const wherePeriod = () => (typeof settings !== "undefined" && settings.saver ? 120000 : 30000);
 
 // From app.js on each GPS fix: send it now if it's been a while
 let lastAcc = 0;
 function partnersOnFix(pos) {
   lastAcc = pos.coords.accuracy;
-  if (whereShare && hasPartners() && Date.now() - lastWherePost > 30000) pollWhere();
+  if (whereShare && hasPartners() && Date.now() - lastWherePost > wherePeriod()) pollWhere();
 }
 
 function setWhereShare(on) {

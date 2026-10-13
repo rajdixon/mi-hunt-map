@@ -13,7 +13,7 @@ function startGoto(target) {
   store.set("goto", goTarget);
   arrived = false;
   for (const s of document.querySelectorAll(".sheet")) if (!s.hidden) closeSheet(s.id);
-  if (watchId == null) $("btn-locate").click();
+  if (watchId == null) $("btn-locate").click(); else refreshWatch();
   startCompass();
   if (lastFix) map.fitBounds(new maplibregl.LngLatBounds(lastFix, lastFix).extend([goTarget.lng, goTarget.lat]),
     { padding: { top: 140, bottom: 200, left: 50, right: 90 }, maxZoom: 17 });
@@ -26,6 +26,7 @@ function stopGoto() {
   goTarget = null; store.set("goto", null);
   map.getSource("goto")?.setData(empty());
   renderGoto();
+  refreshWatch();
 }
 
 // ---------- Compass ----------

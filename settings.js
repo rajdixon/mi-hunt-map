@@ -1,10 +1,12 @@
 "use strict";
-// Settings (gear in the top bar): text size, night mode, keep the screen on,
-// map labels and go-to walking pace. Kept on this phone only.
+// Settings (gear in the top bar): text size, distance units, night mode, keep
+// the screen on, battery saver, map labels and go-to walking pace. Kept on
+// this phone only.
 
 const TEXT_SIZES = [["Small", 0.9], ["Normal", 1], ["Large", 1.15], ["Extra large", 1.3]];
+const UNITS = [["Yards & miles", "yd"], ["Feet & miles", "ft"], ["Meters & km", "m"]];
 const PACES = [["Slow", 1.5], ["Normal", 2], ["Fast", 3]];   // mph, for go-to walking times
-const settings = { text: 1, night: false, awake: false, labels: true, pace: 2, ...store.get("settings", {}) };
+const settings = { text: 1, units: "yd", night: false, awake: false, saver: false, labels: true, pace: 2, ...store.get("settings", {}) };
 let awakeLock = null;
 
 function applySettings() {
@@ -13,13 +15,25 @@ function applySettings() {
   document.body.classList.toggle("no-labels", !settings.labels);
   document.querySelector('meta[name="theme-color"]').content = settings.night ? "#000000" : "#1d2419";
   holdAwake();
+  scaleControl.setUnit(settings.units === "m" ? "metric" : "imperial");
 }
 function setSetting(k, v) {
   settings[k] = v; store.set("settings", settings);
   applySettings(); renderSettings();
-  if (k === "pace" && typeof renderGoto === "function") renderGoto();
+  if (k === "saver") { refreshWatch(); if (typeof pollWhere === "function") pollWhere(); }
+  if ((k === "pace" || k === "units") && typeof renderGoto === "function") renderGoto();
+  if (k === "units") refreshDistances();
 }
 const walkMps = () => settings.pace * 1609.34 / 3600;
+
+// Redraw open lists so distances show in the new units
+function refreshDistances() {
+  if (!$("sheet-pins").hidden) { renderPinList(); renderShapeList(); if (typeof renderPartnersCard === "function") renderPartnersCard(); }
+  if (!$("sheet-tracks").hidden) renderTrackSheet();
+  if (typeof measure !== "undefined" && measure) renderMeasureBar();
+  if (typeof drawing !== "undefined" && drawing) renderDrawBar();
+  if (typeof renderRecPill === "function" && typeof rec !== "undefined" && rec) renderRecPill();
+}
 
 // Screen on while the app is open; phones drop the lock when you switch away
 async function holdAwake() {
@@ -58,9 +72,13 @@ function renderSettings() {
     el("h3", "sheet-sub", "Text size"),
     choice("Text size", TEXT_SIZES, settings.text, v => setSetting("text", v)),
     el("p", "fine", "Makes buttons, panels and labels bigger. The map itself zooms with your fingers as usual."),
+    el("h3", "sheet-sub", "Distances"),
+    choice("Distances", UNITS, settings.units, v => setSetting("units", v)),
+    el("p", "fine", settings.units === "m" ? "Areas in hectares." : settings.units === "yd" ? "Short distances when measuring show in feet. Areas in acres." : "Areas in acres."),
     el("h3", "sheet-sub", "In the field"),
     toggle("Night mode", "Red, dimmed screen that keeps your night vision in a dark stand", settings.night, v => setSetting("night", v)),
     toggle("Keep the screen on", "While the app is open. Uses more battery; the screen still turns off when you lock the phone", settings.awake, v => setSetting("awake", v)),
+    toggle("Battery saver", "Checks GPS once a minute instead of constantly, and shares your location with partners every 2 minutes. Recording a track and Go to still get full-speed GPS", settings.saver, v => setSetting("saver", v)),
     toggle("Names on the map", "Labels under pins, lines and areas", settings.labels, v => setSetting("labels", v)),
     el("h3", "sheet-sub", "Go-to walking pace"),
     choice("Walking pace", PACES.map(([l, v]) => [`${l} · ${v} mph`, v]), settings.pace, v => setSetting("pace", v)),
@@ -82,7 +100,7 @@ function renderSettings() {
   box.append(about);
 }
 
-const APP_VERSION = "2026-10-13";
+const APP_VERSION = "2026-10-13b";
 $("btn-settings").addEventListener("click", () => {
   if (!$("sheet-settings").hidden) return closeSheet("sheet-settings");
   renderSettings();

@@ -23,9 +23,9 @@ function areaM2(pts) {
   return Math.abs(a) / 2;
 }
 
+// Short distances in feet when the units are yards (bow range), else as fmtDist
 function fmtLen(m) {
-  const ft = m * 3.28084;
-  return ft < 300 ? `${Math.round(ft)} ft` : fmtDist(m);
+  return units() === "yd" && m * 3.28084 < 300 ? `${Math.round(m * 3.28084)} ft` : fmtDist(m);
 }
 
 function drawMeasure() {
@@ -61,7 +61,7 @@ function renderMeasureBar() {
     main = p.length < 2 ? "Tap points on the map" : fmtLen(total);
     sub = p.length < 2 ? "Distance between taps, and the area they enclose."
       : p.length === 2 ? `${bearing(p[0], p[1])} · tap more points for area`
-      : `Area ${(areaM2(p) / 4046.86).toFixed(areaM2(p) < 40468 ? 2 : 1)} acres · last leg ${fmtLen(distMeters(p.at(-2), p.at(-1)))}`;
+      : `Area ${fmtArea(areaM2(p))} · last leg ${fmtLen(distMeters(p.at(-2), p.at(-1)))}`;
   }
   $("measure-main").textContent = main;
   $("measure-sub").textContent = sub;
