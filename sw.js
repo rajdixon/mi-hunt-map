@@ -3,7 +3,7 @@
 // Land data: cache-first; a data refresh bumps VERSION to replace it.
 // Basemap tiles: areas saved from the Offline maps sheet (never trimmed),
 // plus tiles cached as you browse (up to MAX_TILES).
-const VERSION = "v20-2026-10-12";
+const VERSION = "v21-2026-10-12";
 const SHELL = `shell-${VERSION}`;
 const TILES = "tiles-v1";
 const PHOTOS = "photos-v1";
@@ -18,10 +18,10 @@ function tileKey(url) {
 }
 
 const SHELL_FILES = [
-  "./", "index.html", "style.css", "app.js", "rules.js", "weather.js", "outlook.js", "vendor/suncalc.js", "pins.js", "tracks.js", "overlays.js", "search.js", "scent.js", "stats.js", "measure.js", "sync.js", "photos.js", "manifest.webmanifest", "icon.svg", "icon-192.png",
+  "./", "index.html", "style.css", "app.js", "rules.js", "weather.js", "outlook.js", "vendor/suncalc.js", "pins.js", "tracks.js", "overlays.js", "search.js", "scent.js", "stats.js", "measure.js", "radar.js", "goto.js", "draw.js", "sync.js", "photos.js", "partners.js", "manifest.webmanifest", "icon.svg", "icon-192.png",
   "data/meta.json", "data/state_forest.geojson", "data/state_wildlife.geojson", "data/state_parks.geojson",
   "data/hap.geojson", "data/commercial_forest.geojson", "data/national_forest.geojson",
-  "data/counties.geojson", "data/dmu.geojson", "data/deer_rules_2026.json",
+  "data/counties.geojson", "data/landlocked.geojson", "data/dmu.geojson", "data/deer_rules_2026.json",
   "https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js",
   "https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css",
 ];
@@ -46,6 +46,7 @@ self.addEventListener("fetch", e => {
   // Photos never change once uploaded: keep each one after it's first seen, for offline
   if (url.origin === location.origin && url.pathname.startsWith("/api/photos/")) { e.respondWith(photo(e.request)); return; }
   if (url.origin === location.origin && url.pathname.startsWith("/api/")) return;   // sync: always live
+  if (url.hostname === "mesonet.agron.iastate.edu") return;   // radar: always live, never kept
 
   if (TILE_HOSTS.includes(url.hostname)) {
     // The page's "Save this area" downloads write their own cache

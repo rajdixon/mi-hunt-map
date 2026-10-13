@@ -26,6 +26,9 @@ jobs:
             echo "No boundary changes."
             exit 0
           fi
+          # Public land changed: find the pieces no public road reaches again
+          pip install --quiet shapely
+          python3 scripts/landlocked.py || echo "Landlocked check failed; keeping the old layer."
           git diff --stat -- 'data/*.geojson'
           # New service worker version makes phones pick up the new data
           sed -i -E "s/^const VERSION = \".*\";/const VERSION = \"data-$(date -u +%Y%m%d%H%M)\";/" sw.js

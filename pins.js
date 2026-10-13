@@ -48,6 +48,7 @@ function pinMarkerEl(pin) {
   b.addEventListener("click", e => {
     e.stopPropagation();
     if (typeof measure !== "undefined" && measure) measureAdd([pin.lng, pin.lat]);
+    else if (typeof drawing !== "undefined" && drawing) drawAdd([pin.lng, pin.lat]);
     else openPinEditor(pin);
   });
   return b;
@@ -196,6 +197,7 @@ function openPinEditor(pin, { shared = false } = {}) {
   renderStats();
   $("photo-note").textContent = "";
   renderPhotos();
+  if (typeof renderShareToggle === "function") renderShareToggle("pin-share", editing);
   showPreview(editing);
   openSheet("sheet-pin-edit");
 }
@@ -241,6 +243,8 @@ $("pin-form").addEventListener("submit", e => {
   if (!editing) return;
   editing.name = $("pin-name").value.trim();
   editing.notes = $("pin-notes").value.trim();
+  const sh = typeof readShareToggle === "function" ? readShareToggle("pin-share") : undefined;
+  if (sh !== undefined) editing.shared = sh;
   if (editing.id) pins = pins.map(p => p.id === editing.id ? { ...editing } : p);
   else pins.push({ ...editing, id: newId(), created: Date.now() });
   savePins();
@@ -371,6 +375,7 @@ map.on("touchstart", e => {
   cancelPress();
   if (e.originalEvent.touches.length !== 1) return;
   const ll = e.lngLat;
+  if ((typeof drawing !== "undefined" && drawing) || (typeof measure !== "undefined" && measure)) return;
   pressTimer = setTimeout(() => {
     pressedAt = Date.now();
     navigator.vibrate?.(30);
@@ -379,7 +384,7 @@ map.on("touchstart", e => {
 });
 for (const ev of ["touchend", "touchcancel", "dragstart", "zoomstart", "rotatestart"]) map.on(ev, cancelPress);
 map.on("touchmove", cancelPress);
-map.on("contextmenu", e => { pressedAt = Date.now(); openPinEditor({ lng: e.lngLat.lng, lat: e.lngLat.lat }); });
+map.on("contextmenu", e => { if (typeof drawing !== "undefined" && drawing) return; pressedAt = Date.now(); openPinEditor({ lng: e.lngLat.lng, lat: e.lngLat.lat }); });
 // The tap that ends a long-press shouldn't also open parcel details
 function pinsSuppressClick() { return Date.now() - pressedAt < 700; }
 
@@ -412,7 +417,7 @@ ${pins.map(p => `  <wpt lat="${p.lat.toFixed(6)}" lon="${p.lng.toFixed(6)}">
 
 $("btn-backup-export").addEventListener("click", () => saveFile(`mi-hunt-land-backup-${today()}.json`, "application/json",
   JSON.stringify({ app: "MI Hunt Land", version: 1, exported: new Date().toISOString(),
-                   pins, tracks: typeof tracks !== "undefined" ? tracks : [] }, null, 1)));
+                   pins, tracks: typeof tracks !== "undefined" ? tracks : [], shapes: typeof shapes !== "undefined" ? shapes : [] }, null, 1)));
 
 $("btn-pin-import").addEventListener("click", () => $("pin-file").click());
 $("pin-file").addEventListener("change", async e => {
@@ -420,7 +425,7 @@ $("pin-file").addEventListener("change", async e => {
   e.target.value = "";
   if (!f) return;
   const text = await f.text();
-  let added = 0, addedTracks = 0;
+  let added = 0, addedTracks = 0, addedShapes = 0;
   const near = (a, b) => Math.abs(a.lat - b.lat) < 1e-5 && Math.abs(a.lng - b.lng) < 1e-5;
   if (text.trimStart().startsWith("{")) {
     // Full JSON backup: merge pins (with logs) and tracks by id
@@ -431,6 +436,11 @@ $("pin-file").addEventListener("change", async e => {
         pins.push(p); added++;
       }
       if (typeof importTracks === "function") addedTracks = importTracks(b.tracks || []);
+      for (const x of b.shapes || []) {
+        if (!Array.isArray(x.pts) || shapes.some(y => y.id === x.id)) continue;
+        shapes.push(x); addedShapes++;
+      }
+      if (addedShapes) saveShapes();
     } catch { $("pin-io-note").textContent = "That file isn't a MI Hunt Land backup."; return; }
   } else {
     const doc = new DOMParser().parseFromString(text, "application/xml");
@@ -445,8 +455,9 @@ $("pin-file").addEventListener("change", async e => {
   }
   savePins();
   renderPinList();
-  const parts = [added && `${added} pin${added === 1 ? "" : "s"}`, addedTracks && `${addedTracks} track${addedTracks === 1 ? "" : "s"}`].filter(Boolean);
-  $("pin-io-note").textContent = parts.length ? `Imported ${parts.join(" and ")}.` : "Nothing new in that file.";
+  const parts = [added && `${added} pin${added === 1 ? "" : "s"}`, addedTracks && `${addedTracks} track${addedTracks === 1 ? "" : "s"}`,
+                 addedShapes && `${addedShapes} line${addedShapes === 1 ? "" : "s"} or area${addedShapes === 1 ? "" : "s"}`].filter(Boolean);
+  $("pin-io-note").textContent = parts.length ? `Imported ${parts.join(", ")}.` : "Nothing new in that file.";
 });
 
 drawPins();

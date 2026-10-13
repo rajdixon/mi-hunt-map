@@ -29,6 +29,9 @@
   <button id="btn-measure" class="top-btn" aria-label="Measure distance and area" title="Measure" aria-pressed="false">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 15.5 15.5 3.5l5 5-12 12Z" fill="none"/><path d="m7 12 2 2M10 9l2 2M13 6l2 2" fill="none"/></svg>
   </button>
+  <button id="btn-draw" class="top-btn" aria-label="Draw a line or area" title="Draw" aria-pressed="false">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l1-4L16 5l3 3L8 19Z" fill="none"/><path d="m14 7 3 3" fill="none"/></svg>
+  </button>
   <div id="status" class="status" data-state="off" role="status" aria-live="polite">
     <span class="status-dot" aria-hidden="true"></span>
     <span id="status-text">Tap ◎ to check your spot</span>
@@ -52,10 +55,43 @@
   </div>
 </div>
 
+<div id="draw-bar" class="measure-bar draw-bar" hidden>
+  <div class="measure-modes" role="radiogroup" aria-label="Draw">
+    <button type="button" class="measure-mode draw-mode" data-kind="line" role="radio">Line</button>
+    <button type="button" class="measure-mode draw-mode" data-kind="area" role="radio">Area</button>
+  </div>
+  <div class="measure-read" aria-live="polite"><strong id="draw-main"></strong><span id="draw-sub"></span></div>
+  <div class="measure-actions">
+    <button type="button" id="btn-draw-cancel" class="btn-ghost">Cancel</button>
+    <button type="button" id="btn-draw-undo" class="btn-ghost">Undo</button>
+    <button type="button" id="btn-draw-done" class="btn-primary">Done</button>
+  </div>
+</div>
+
 <button id="rec-pill" class="rec-pill" hidden aria-label="Track recording">
   <span class="rec-dot" aria-hidden="true"></span>
   <span class="chip-text"><span id="rec-main" class="chip-main"></span><span id="rec-sub" class="chip-sub"></span></span>
 </button>
+
+<div id="radar-bar" class="radar-bar" hidden>
+  <span class="radar-legend" aria-hidden="true"></span>
+  <span id="radar-time" class="radar-time" aria-live="polite"></span>
+  <button type="button" id="btn-radar-play" class="btn-ghost small-btn" aria-pressed="false">Play last hour</button>
+  <button type="button" id="btn-radar-off" class="radar-x" aria-label="Turn radar off">×</button>
+</div>
+
+<div id="goto-bar" class="goto-bar" hidden>
+  <div id="goto-arrow" class="goto-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 2 20 21l-8-4.5L4 21Z"/></svg></div>
+  <div class="goto-text" aria-live="polite">
+    <span id="goto-name" class="goto-name"></span>
+    <strong id="goto-dist" class="goto-dist"></strong>
+    <span id="goto-sub" class="goto-sub"></span>
+  </div>
+  <div class="goto-actions">
+    <button type="button" id="btn-goto-compass" class="btn-ghost small-btn">Compass</button>
+    <button type="button" id="btn-goto-stop" class="btn-primary small-btn">Stop</button>
+  </div>
+</div>
 
 <div class="crosshair" aria-hidden="true"></div>
 
@@ -91,6 +127,8 @@
   <h3 class="sheet-sub">Overlays</h3>
   <ul id="overlay-list" class="layer-list overlay-list"></ul>
   <ul class="layer-list overlay-list">
+    <li><label for="radar-on"><input type="checkbox" id="radar-on">
+      <span><span class="layer-name">Weather radar</span><span class="layer-note">Live NWS radar, updated every 5 minutes; play the last hour to see where rain is heading</span></span></label></li>
     <li><label for="scent-on"><input type="checkbox" id="scent-on">
       <span><span class="layer-name">Scent cones at stands and blinds</span><span class="layer-note">Downwind of each stand for this hour's forecast; red when it covers a trail cam, rub or scrape</span></span></label></li>
   </ul>
@@ -139,6 +177,7 @@
     <button class="sheet-close" data-close="sheet-pins" aria-label="Close">×</button>
   </div>
   <p id="sync-status" class="sync-status" hidden></p>
+  <div id="partners-card" class="partners-card" hidden></div>
   <div id="wind-card" class="wind-card"></div>
   <p class="fine lead">Saved only on this phone. Tip: press and hold anywhere on the map to drop a pin there.</p>
   <div class="save-actions pin-add">
@@ -147,6 +186,12 @@
   </div>
   <ul id="pin-list" class="pin-list"></ul>
   <p id="pin-empty" class="fine">No pins yet. Mark your stands, blinds, camp, trail cams, rubs, scrapes and parking spots.</p>
+  <div class="log-title">
+    <h3 class="sheet-sub">Lines and areas</h3>
+    <button type="button" id="btn-draw-new" class="btn-ghost small-btn">Draw</button>
+  </div>
+  <ul id="shape-list" class="pin-list"></ul>
+  <p id="shape-empty" class="fine">Nothing drawn yet. Draw property lines, routes in, drag lines, food plots and bedding areas with the ✎ button at the top.</p>
   <h3 class="sheet-sub">Backup</h3>
   <div class="save-actions">
     <button id="btn-backup-export" class="btn-ghost">Full backup</button>
@@ -156,7 +201,7 @@
     <button id="btn-pin-export" class="btn-ghost">Pins as GPX</button>
   </div>
   <input id="pin-file" type="file" accept=".gpx,.json,application/gpx+xml,application/json,application/xml,text/xml" hidden>
-  <p id="pin-io-note" class="fine">Full backup saves pins, hunt logs and tracks. GPX opens in onX, HuntStand, Gaia and Google Earth.</p>
+  <p id="pin-io-note" class="fine">Full backup saves pins, hunt logs, tracks, lines and areas. GPX opens in onX, HuntStand, Gaia and Google Earth.</p>
 </section>
 
 <section id="sheet-pin-edit" class="sheet" hidden aria-label="Edit pin">
@@ -176,12 +221,14 @@
       <p id="pin-scent" class="fine"></p>
     </div>
     <p id="pin-coords" class="fine mono"></p>
+    <div id="pin-share" class="share-toggle" hidden></div>
     <div class="save-actions">
       <button type="submit" class="btn-primary">Save pin</button>
       <button type="button" id="btn-pin-cancel" class="btn-ghost">Cancel</button>
     </div>
     <div class="pin-edit-extra">
-      <a id="pin-directions" class="btn-ghost link-btn" target="_blank" rel="noopener">Directions</a>
+      <button type="button" id="btn-pin-goto" class="btn-ghost link-btn">Go to</button>
+      <a id="pin-directions" class="btn-ghost link-btn" target="_blank" rel="noopener">Drive</a>
       <button type="button" id="btn-pin-share" class="btn-ghost link-btn">Share</button>
       <button type="button" id="btn-pin-delete" class="area-del">Delete</button>
     </div>
@@ -223,6 +270,32 @@
     <ul id="log-list" class="log-list"></ul>
     <p id="log-empty" class="fine">No entries yet. Log sightings, shots and harvests here to see what this spot does over the seasons.</p>
   </section>
+</section>
+
+<section id="sheet-shape" class="sheet" hidden aria-label="Line or area">
+  <div class="sheet-grip" aria-hidden="true"></div>
+  <div class="sheet-head">
+    <div>
+      <h2 id="shape-title">New line</h2>
+      <p id="shape-size" class="rules-meta"></p>
+    </div>
+    <button class="sheet-close" data-close="sheet-shape" aria-label="Close">×</button>
+  </div>
+  <form id="shape-form" class="pin-form">
+    <label class="field"><span>Name</span><input id="shape-name" type="text" maxlength="60" autocomplete="off"></label>
+    <div id="shape-ideas" class="idea-chips"></div>
+    <div class="field"><span>Color</span><div id="shape-colors" class="color-chips" role="radiogroup" aria-label="Color"></div></div>
+    <label class="field"><span>Notes</span><textarea id="shape-notes" rows="2" maxlength="500" placeholder="e.g. Walk in on the east side, wind from the west"></textarea></label>
+    <div id="shape-share" class="share-toggle" hidden></div>
+    <div class="save-actions">
+      <button type="submit" class="btn-primary">Save</button>
+      <button type="button" id="btn-shape-cancel" class="btn-ghost">Cancel</button>
+    </div>
+    <div class="pin-edit-extra">
+      <button type="button" id="btn-shape-redraw" class="btn-ghost link-btn">Change points</button>
+      <button type="button" id="btn-shape-delete" class="area-del">Delete</button>
+    </div>
+  </form>
 </section>
 
 <section id="sheet-tracks" class="sheet" hidden aria-label="Tracks">
@@ -283,6 +356,9 @@
 <script src="scent.js"></script>
 <script src="stats.js"></script>
 <script src="measure.js"></script>
+<script src="radar.js"></script>
+<script src="goto.js"></script>
+<script src="draw.js"></script>
 <script src="sync.js"></script>
 
 <div id="photo-viewer" class="photo-viewer" hidden role="dialog" aria-modal="true" aria-label="Photo">
@@ -301,5 +377,6 @@
   </div>
 </div>
 <script src="photos.js"></script>
+<script src="partners.js"></script>
 </body>
 </html>

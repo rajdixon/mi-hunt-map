@@ -19,6 +19,10 @@ Backgrounds: Esri Topo, Esri Satellite, LiDAR terrain (USGS 3DEP bare-earth hill
 
 Overlays are queried live from DNR ArcGIS services for the area on screen, so they need a signal: forest stand cover type (zoom 13+), DNR roads (11+), DNR trails with hunter walking trails and temporary closures (10+), DNR parking (10+), PLSS sections (12+) and townships (8+). DMU boundaries come from `data/dmu.geojson` and work offline.
 
+**Weather radar** (`radar.js`): NWS composite reflectivity from the [Iowa Environmental Mesonet](https://mesonet.agron.iastate.edu/ogc/) tile mirror, refreshed every 5 minutes, with a loop of the last 50 minutes. Never cached.
+
+**Possibly landlocked public land** (`data/landlocked.geojson`, built by `scripts/landlocked.py`): public pieces (State Forest, game areas, parks, National Forest) that no Act 51 public road touches, counting Commercial Forest and HAP land as walkable. Roads come from the Michigan Geographic Framework (All Roads v17a). Pieces under 5 acres are left out. Some can still be reached by water, a trail, a forest road or an easement. The weekly data job reruns it when the land boundaries change (needs `pip install shapely`).
+
 ## Deer hunting hours and rules
 
 Tap the hours chip under the top bar. It shows legal hunting hours and the 2026 deer rules for your GPS position, or for the map center (marked with a crosshair) when location is off. It uses `data/deer_rules_2026.json`, built from the [2026 deer digest](https://www.michigan.gov/dnr/-/media/Project/Websites/dnr/Documents/LED/digests/2026_deer_regs_summary.pdf):
@@ -81,7 +85,16 @@ The hunting-hours sheet (tap the hours chip) shows, for the chosen day: the NWS 
 
 ## Private server and sync
 
-`server/server.mjs` (Node 22, no dependencies) serves the app at hunt.tradersedges.net through the Cloudflare Tunnel on webserver02, behind Cloudflare Access. It verifies the Access token on every request and serves nothing until `CF_TEAM` and `CF_AUD` are set. Each user's pins (with hunt logs) and tracks are kept in `~/mi-hunt-data/` as one JSON file. `sync.js` keeps the phone's copy and syncs when there's a signal; the newer edit of each pin or track wins and deletes carry over. Runs as a user service (`systemctl --user status mi-hunt`) with a daily `git pull`. Shared-pin links point at the public GitHub Pages copy so people without a login can open them.
+`server/server.mjs` (Node 22, no dependencies) serves the app at hunt.tradersedges.net through the Cloudflare Tunnel on webserver02, behind Cloudflare Access. It verifies the Access token on every request and serves nothing until `CF_TEAM` and `CF_AUD` are set. Each user's pins (with hunt logs), tracks, lines and areas are kept in `~/mi-hunt-data/` as one JSON file. `sync.js` keeps the phone's copy and syncs when there's a signal; the newer edit of each pin or track wins and deletes carry over. Runs as a user service (`systemctl --user status mi-hunt`) with a daily `git pull`. Shared-pin links point at the public GitHub Pages copy so people without a login can open them.
+
+## Lines, areas and go-to
+
+- **Draw** (`draw.js`, pencil in the top bar): tap points for a line (property line, route in, drag line) or an area (food plot, bedding area, sanctuary), then give it a name, color and notes. Tap one on the map to edit, change its points or delete it. Listed under Pins, synced, and included in the full backup.
+- **Go to** (`goto.js`, in a pin's editor or a partner's pin or location): a live arrow, distance, compass bearing and walking time (2 mph) from GPS and the phone's compass. The iPhone asks for compass permission the first time. With no compass, the arrow points map-up until you're walking. Works with no signal.
+
+## Hunting partners
+
+Set `HUNT_GROUP` in `~/.config/mi-hunt.env` on webserver02 to the partners' emails, yours included (comma-separated), add the same emails to the Cloudflare Access policy, and restart (`systemctl --user restart mi-hunt`). Each person keeps their own private data; pins, tracks, lines and areas marked "Share" are copied to `~/mi-hunt-data/group.json` on every sync and show read-only on the partners' maps (pins with a letter badge, tracks and shapes dashed), including shared pins' hunt logs and photos. Under Pins, "Share my location" sends your position every 30 seconds while the app is open on screen (`/api/where`, kept in memory for 12 hours).
 
 ## Photos and backups
 

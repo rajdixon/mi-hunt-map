@@ -1,5 +1,6 @@
 // MI Hunt Land sync server: serves the app and keeps each user's pins,
-// hunt logs and tracks. No dependencies; Node 22+.
+// hunt logs, tracks and drawings, and lets a small group of hunting partners
+// see what each other shares and where they are. No dependencies; Node 22+.
 //
 // It sits behind a Cloudflare Tunnel with Cloudflare Access in front, listens
 // on localhost only, and checks the Access login token on every request.
@@ -13,6 +14,9 @@
 //   CF_TEAM         Cloudflare Zero Trust team name (<team>.cloudflareaccess.com)
 //   CF_AUD          the Access application's AUD tag
 //   ALLOWED_EMAILS  optional comma-separated allow list, checked as well as Access
+//   HUNT_GROUP      comma-separated emails of hunting partners (you included) who
+//                   see each other's shared pins, tracks and drawings, and live
+//                   locations. Each still needs a login in the Access policy.
 //   DEV_USER        local testing only: skip Access and act as this email
 //   CF_CERTS_URL    testing only: where to fetch Access signing keys
 
@@ -27,7 +31,10 @@ const PORT = +(process.env.PORT || 8095);
 const APP_DIR = path.resolve(process.env.APP_DIR || path.join(path.dirname(fileURLToPath(import.meta.url)), ".."));
 const DATA_DIR = path.resolve(process.env.DATA_DIR || path.join(os.homedir(), "mi-hunt-data"));
 const { CF_TEAM, CF_AUD, DEV_USER } = process.env;
-const ALLOWED = (process.env.ALLOWED_EMAILS || "").split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
+const emails = v => (v || "").split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
+const ALLOWED = emails(process.env.ALLOWED_EMAILS);
+const GROUP = emails(process.env.HUNT_GROUP);
+const WHERE_HOURS = 12;   // partner locations older than this are dropped
 const MAX_BODY = 20 * 1024 * 1024;
 const ORPHAN_DAYS = 7;   // photos no pin refers to are removed after this long
 const TOMB_DAYS = 180;
@@ -55,7 +62,8 @@ const b64json = s => JSON.parse(Buffer.from(s, "base64url").toString());
 
 // The signed-in email, or null
 async function userOf(req) {
-  if (DEV_USER) return DEV_USER.toLowerCase();
+  // Local testing only (DEV_USER is never set on the server): a second user via header
+  if (DEV_USER) return String(req.headers["x-dev-user"] || DEV_USER).toLowerCase();
   const token = req.headers["cf-access-jwt-assertion"];
   if (!token) return null;
   try {
@@ -83,8 +91,8 @@ const PHOTO_ID = /^[a-z0-9]{6,32}$/;
 const PHOTO_SIZES = ["full", "thumb"];
 
 async function load(email) {
-  try { return JSON.parse(await fs.readFile(fileOf(email), "utf8")); }
-  catch { return { email, pins: [], tracks: [] }; }
+  try { return { shapes: [], ...JSON.parse(await fs.readFile(fileOf(email), "utf8")) }; }
+  catch { return { email, pins: [], tracks: [], shapes: [] }; }
 }
 
 // Write to a temp file and rename, so a crash never leaves half a file
@@ -114,6 +122,56 @@ function merge(a = [], b = []) {
   return [...m.values()].filter(x => !x.deleted || stamp(x) > cutoff);
 }
 
+// ---------- Hunting partners ----------
+// What each member shares, kept in group.json so it survives restarts:
+// { [key]: { name, pins, tracks, shapes } }. Live locations stay in memory.
+const inGroup = email => GROUP.length > 1 && GROUP.includes(email);
+const groupFile = () => path.join(DATA_DIR, "group.json");
+let group = null;
+const where = new Map();   // key -> { name, lng, lat, acc, t }
+
+async function loadGroup() {
+  if (!group) { try { group = JSON.parse(await fs.readFile(groupFile(), "utf8")); } catch { group = {}; } }
+  // Drop anyone taken out of HUNT_GROUP
+  const keys = new Set(GROUP.map(keyOf));
+  for (const k of Object.keys(group)) if (!keys.has(k)) delete group[k];
+  return group;
+}
+
+const nameOf = (email, doc) => (doc?.name || "").trim() || email.split("@")[0];
+const shared = list => (list || []).filter(x => x.shared && !x.deleted);
+
+async function publish(email, doc) {
+  if (!inGroup(email)) return;
+  const g = await loadGroup();
+  g[keyOf(email)] = { name: nameOf(email, doc), pins: shared(doc.pins), tracks: shared(doc.tracks), shapes: shared(doc.shapes) };
+  const tmp = `${groupFile()}.${process.pid}.tmp`;
+  await fs.writeFile(tmp, JSON.stringify(g), { mode: 0o600 });
+  await fs.rename(tmp, groupFile());
+}
+
+// The other members and what they share; null when you're not in a group
+async function partnersOf(email) {
+  if (!inGroup(email)) return null;
+  const g = await loadGroup(), me = keyOf(email);
+  return {
+    partners: GROUP.filter(e => e !== email).map(e => {
+      const k = keyOf(e), x = g[k];
+      return { key: k, name: x?.name || e.split("@")[0], joined: !!x, pins: x?.pins || [], tracks: x?.tracks || [], shapes: x?.shapes || [] };
+    }),
+    me,
+  };
+}
+
+function wherePartners(email) {
+  const me = keyOf(email), cutoff = Date.now() - WHERE_HOURS * 3600e3, out = [];
+  for (const [k, w] of where) {
+    if (w.t < cutoff) where.delete(k);
+    else if (k !== me) out.push({ key: k, ...w });
+  }
+  return out;
+}
+
 // ---------- HTTP ----------
 function send(res, status, body, type = "application/json") {
   res.writeHead(status, { "Content-Type": type, "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" });
@@ -137,10 +195,17 @@ async function readBody(req) {
 
 // ---------- Photos ----------
 // /api/photos/<id>/<full|thumb>: the phone resizes before upload and sends JPEGs
-async function photos(req, res, email, parts) {
+async function photos(req, res, email, parts, owner) {
   const [id, size] = parts;
   if (!PHOTO_ID.test(id || "")) return send(res, 404, { error: "Not found" });
-  const dir = photoDir(email);
+  let dir = photoDir(email);
+  // A partner's photo: only to view, and only on a pin they share
+  if (owner && owner !== keyOf(email)) {
+    const g = inGroup(email) ? await loadGroup() : {};
+    const ok = req.method === "GET" && /^[0-9a-f]{24}$/.test(owner) && g[owner]?.pins.some(p => (p.photos || []).some(x => x.id === id));
+    if (!ok) return send(res, 404, { error: "Not found" });
+    dir = path.join(DATA_DIR, "photos", owner);
+  }
   if (req.method === "DELETE" && !size) {
     await Promise.all(PHOTO_SIZES.map(z => fs.rm(path.join(dir, `${id}.${z}.jpg`), { force: true })));
     return send(res, 200, { ok: true });
@@ -181,25 +246,53 @@ async function pruneOrphans(email, doc) {
   }
 }
 
-async function api(req, res, email, pathname) {
-  if (pathname.startsWith("/api/photos/")) return photos(req, res, email, pathname.slice(12).split("/"));
-  if (pathname !== "/api/sync") return send(res, 404, { error: "Not found" });
-  if (req.method === "GET") {
+const reply = async (email, doc) =>
+  ({ email, name: nameOf(email, doc), pins: doc.pins, tracks: doc.tracks, shapes: doc.shapes, group: await partnersOf(email) });
+
+async function api(req, res, email, url) {
+  const { pathname } = url;
+  if (pathname.startsWith("/api/photos/")) return photos(req, res, email, pathname.slice(12).split("/"), url.searchParams.get("o"));
+  if (pathname === "/api/where") return whereApi(req, res, email);
+  if (pathname === "/api/me" && req.method === "POST") {
+    const body = await readBody(req);
     const doc = await load(email);
-    return send(res, 200, { email, pins: doc.pins, tracks: doc.tracks });
+    doc.email = email;
+    doc.name = String(body.name || "").trim().slice(0, 40);
+    await save(email, doc);
+    await publish(email, doc);
+    return send(res, 200, await reply(email, doc));
   }
+  if (pathname !== "/api/sync") return send(res, 404, { error: "Not found" });
+  if (req.method === "GET") return send(res, 200, await reply(email, await load(email)));
   if (req.method === "POST") {
     const body = await readBody(req);
     const doc = await load(email);
     doc.email = email;
-    doc.pins = merge(doc.pins, Array.isArray(body.pins) ? body.pins : []);
-    doc.tracks = merge(doc.tracks, Array.isArray(body.tracks) ? body.tracks : []);
+    for (const k of ["pins", "tracks", "shapes"]) doc[k] = merge(doc[k], Array.isArray(body[k]) ? body[k] : []);
     doc.saved = Date.now();
     await save(email, doc);
+    await publish(email, doc);
     pruneOrphans(email, doc).catch(e => console.error("prune", e));
-    return send(res, 200, { email, pins: doc.pins, tracks: doc.tracks });
+    return send(res, 200, await reply(email, doc));
   }
   return send(res, 405, { error: "Method not allowed" });
+}
+
+// Live locations: POST yours while sharing, DELETE to stop, GET your partners'
+async function whereApi(req, res, email) {
+  if (!inGroup(email)) return send(res, 404, { error: "No hunting group" });
+  const key = keyOf(email);
+  if (req.method === "POST") {
+    const b = await readBody(req);
+    const lng = +b.lng, lat = +b.lat;
+    if (!(Math.abs(lng) <= 180 && Math.abs(lat) <= 90)) return send(res, 400, { error: "Bad location" });
+    where.set(key, { name: nameOf(email, await load(email)), lng, lat, acc: Math.round(+b.acc || 0), t: Date.now() });
+  } else if (req.method === "DELETE") {
+    where.delete(key);
+  } else if (req.method !== "GET") {
+    return send(res, 405, { error: "Method not allowed" });
+  }
+  return send(res, 200, { partners: wherePartners(email), sharing: where.has(key) });
 }
 
 async function serveFile(req, res, pathname) {
@@ -227,8 +320,8 @@ const server = http.createServer(async (req, res) => {
     if (!DEV_USER && (!CF_TEAM || !CF_AUD)) return send(res, 503, "Not configured: set CF_TEAM and CF_AUD.", "text/plain");
     const email = await userOf(req);
     if (!email) return send(res, 403, "Sign in through Cloudflare Access.", "text/plain");
-    const { pathname } = new URL(req.url, "http://x");
-    if (pathname.startsWith("/api/")) return await api(req, res, email, pathname);
+    const url = new URL(req.url, "http://x"), { pathname } = url;
+    if (pathname.startsWith("/api/")) return await api(req, res, email, url);
     if (req.method !== "GET" && req.method !== "HEAD") return send(res, 405, "Method not allowed", "text/plain");
     return await serveFile(req, res, pathname);
   } catch (e) {

@@ -49,7 +49,7 @@ function renderMeasureBar() {
   bar.hidden = !measure;
   $("btn-measure").setAttribute("aria-pressed", String(!!measure));
   if (!measure) return;
-  document.querySelectorAll(".measure-mode").forEach(b => b.setAttribute("aria-checked", String(b.dataset.mode === measure.mode)));
+  document.querySelectorAll(".measure-mode:not(.draw-mode)").forEach(b => b.setAttribute("aria-checked", String(b.dataset.mode === measure.mode)));
   let main, sub;
   if (measure.mode === "ring") {
     main = measure.rings.length ? `${measure.rings.length} safety ring${measure.rings.length === 1 ? "" : "s"}` : "Tap a building";
@@ -107,7 +107,7 @@ $("btn-measure-undo").addEventListener("click", () => {
   (measure.mode === "ring" ? measure.rings : measure.pts).pop();
   drawMeasure(); renderMeasureBar();
 });
-document.querySelectorAll(".measure-mode").forEach(b => b.addEventListener("click", () => {
+document.querySelectorAll(".measure-mode:not(.draw-mode)").forEach(b => b.addEventListener("click", () => {
   measure.mode = b.dataset.mode;
   renderMeasureBar();
 }));

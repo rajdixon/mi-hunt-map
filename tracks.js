@@ -186,7 +186,17 @@ ${t.points.map(p => `    <trkpt lat="${p[1]}" lon="${p[0]}"><time>${new Date(p[2
       saveTracks(); drawSavedTracks(); renderTrackSheet();
     });
     const actions = el("div", "track-actions");
-    actions.append(show, gpx, del);
+    actions.append(show, gpx);
+    if (typeof hasPartners === "function" && hasPartners()) {
+      const sh = el("button", "area-del" + (t.shared ? " on" : ""), t.shared ? "Shared ✓" : "Share");
+      sh.setAttribute("aria-pressed", String(!!t.shared));
+      sh.addEventListener("click", () => {
+        tracks = tracks.map(x => x.id === t.id ? { ...x, shared: !x.shared } : x);
+        saveTracks(); renderTrackSheet();
+      });
+      actions.append(sh);
+    }
+    actions.append(del);
     li.append(main, actions);
     ul.append(li);
   }

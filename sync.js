@@ -1,5 +1,5 @@
 "use strict";
-// Sync pins (with their hunt logs) and saved tracks with the private server
+// Sync pins (with their hunt logs), saved tracks, and drawn lines and areas with the private server
 // at hunt.tradersedges.net. The phone keeps its own copy and works offline;
 // changes go up when there's a signal. Each pin and track carries an
 // `updated` time and the newer edit wins; deletes are kept as markers so
@@ -14,18 +14,19 @@ const MOVED = true;    // the public copy points people to the server
 const onPublicCopy = location.hostname.endsWith("github.io");
 let syncOn = false, syncBusy = false, syncAgain = false, syncTimer = null, applying = false;
 let syncState = { at: store.get("sync:at", 0), msg: "" };
-const tombs = store.get("sync:tombs", { pins: {}, tracks: {} });
+const SYNCED = ["pins", "tracks", "shapes"];
+const tombs = { pins: {}, tracks: {}, shapes: {}, ...store.get("sync:tombs", {}) };
 
 // ---------- Change tracking ----------
 // Every save of pins or tracks goes through store.set; stamp what changed
 // and remember what was deleted.
 const sansStamp = x => JSON.stringify({ ...x, updated: undefined });
-const lastSaved = { pins: new Map(), tracks: new Map() };
-for (const k of ["pins", "tracks"]) for (const x of store.get(k, [])) lastSaved[k].set(x.id, sansStamp(x));
+const lastSaved = { pins: new Map(), tracks: new Map(), shapes: new Map() };
+for (const k of SYNCED) for (const x of store.get(k, [])) lastSaved[k].set(x.id, sansStamp(x));
 
 const storeSet = store.set;
 store.set = (k, v) => {
-  if ((k === "pins" || k === "tracks") && Array.isArray(v)) {
+  if (SYNCED.includes(k) && Array.isArray(v)) {
     const before = lastSaved[k], now = Date.now(), after = new Map();
     for (const x of v) {
       const s = sansStamp(x);
@@ -60,7 +61,7 @@ async function syncNow() {
     const res = await fetch("/api/sync", {
       method: "POST", redirect: "manual", credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ pins: outgoing("pins", pins), tracks: outgoing("tracks", tracks) }),
+      body: JSON.stringify({ pins: outgoing("pins", pins), tracks: outgoing("tracks", tracks), shapes: outgoing("shapes", shapes) }),
     });
     if (res.type === "opaqueredirect" || res.status === 401 || res.status === 403) { setSync("", "login"); return; }
     if (!res.ok) throw new Error(res.status);
@@ -88,17 +89,20 @@ function applyServer(doc) {
     for (const x of remote) if (x.deleted) delete tombs[k][x.id];
     return [...m.values()].filter(x => !x.deleted && !tombs[k][x.id]);
   };
+  if ("group" in doc && typeof setGroup === "function") setGroup(doc.group, doc.name);
   const newPins = take("pins", pins, doc.pins || []), newTracks = take("tracks", tracks, doc.tracks || []);
-  const changed = JSON.stringify(newPins) !== JSON.stringify(pins) || JSON.stringify(newTracks) !== JSON.stringify(tracks);
+  const newShapes = take("shapes", shapes, doc.shapes || []);
+  const changed = JSON.stringify(newPins) !== JSON.stringify(pins) || JSON.stringify(newTracks) !== JSON.stringify(tracks)
+    || JSON.stringify(newShapes) !== JSON.stringify(shapes);
   applying = true;
   try {
-    pins = newPins; tracks = newTracks.sort((a, b) => b.start - a.start);
-    store.set("pins", pins); store.set("tracks", tracks);
+    pins = newPins; tracks = newTracks.sort((a, b) => b.start - a.start); shapes = newShapes;
+    store.set("pins", pins); store.set("tracks", tracks); store.set("shapes", shapes);
     storeSet("sync:tombs", tombs);
   } finally { applying = false; }
   if (!changed) return;
-  drawPins(); drawSavedTracks();
-  if (!$("sheet-pins").hidden) renderPinList();
+  drawPins(); drawSavedTracks(); drawShapes();
+  if (!$("sheet-pins").hidden) { renderPinList(); renderShapeList(); }
   if (!$("sheet-tracks").hidden) renderTrackSheet();
   if (editing?.id) editing = { ...editing, ...pins.find(p => p.id === editing.id) };
 }
@@ -142,7 +146,7 @@ async function startSync() {
 }
 
 function showMoved() {
-  const hasData = pins.length || tracks.length;
+  const hasData = pins.length || tracks.length || shapes.length;
   if (!hasData || store.get("moved:stay", false)) {
     if (!hasData && !store.get("moved:stay", false)) location.replace(HOME);
     return;

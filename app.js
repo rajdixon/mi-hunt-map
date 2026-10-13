@@ -153,6 +153,10 @@ map.on("moveend", () => {
 map.on("click", e => {
   if (typeof measureClick === "function" && measureClick(e)) return;
   if (typeof pinsSuppressClick === "function" && pinsSuppressClick()) return;
+  if (typeof drawClick === "function" && drawClick(e)) return;
+  const shape = typeof shapeAt === "function" && shapeAt(e.point);
+  if (shape) { openShapeEditor(shape); return; }
+  if (typeof partnerShapeAt === "function" && partnerShapeAt(e.point)) return;
   const hits = hitsAt([e.lngLat.lng, e.lngLat.lat], true);
   // Overlay features under the tap (stand, road, trail, section...), from overlays.js
   const extras = typeof overlayHitsAt === "function" ? overlayHitsAt(e.point) : [];
@@ -266,6 +270,8 @@ function onFix(pos) {
 
   if (typeof refreshRules === "function") refreshRules();
   if (typeof trackOnFix === "function") trackOnFix(pos);
+  if (typeof gotoOnFix === "function") gotoOnFix(pos);
+  if (typeof partnersOnFix === "function") partnersOnFix(pos);
   const hits = hitsAt(lastFix, false);
   if (hits.length) setStatus("in", `On ${hits[0].layer.name}`);
   else setStatus("out", "Not on mapped public land");

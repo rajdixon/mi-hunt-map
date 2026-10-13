@@ -97,6 +97,16 @@ const OVERLAYS = [
       rows: [["Acres", p.Acres], ["Address", p.PCOMBINED], ["Class", p.PRTYCLSTXT], ["Township", p.GOVUNIT], ["Parcel", p.PELNUMBER],
              ["Tax record", p.BSAlink && linkEl("Open in BS&A", p.BSAlink)]] }) },
 
+  { id: "landlocked", name: "Possibly landlocked public land", note: "Public land no public road touches; often less hunting pressure",
+    minzoom: 0, local: "data/landlocked.geojson",
+    layers: [
+      { type: "fill", paint: { "fill-color": "#e5534b", "fill-opacity": 0.28 } },
+      { type: "line", paint: { "line-color": "#e5534b", "line-width": ["interpolate", ["linear"], ["zoom"], 8, 1.5, 14, 3] } }],
+    info: p => ({ kind: "Possibly landlocked public land", title: p.unit ? `${p.unit} (${p.kind})` : p.kind,
+      rows: [["Acres", p.acres],
+             ["Why", "No public road touches this piece, or the State Forest, Commercial Forest or HAP land around it."],
+             ["Getting in", "You may be able to reach it by water, a DNR trail, an easement, or with a landowner's permission to cross. Crossing private land without permission is trespassing."]] }) },
+
   { id: "dmus", name: "Deer management units", note: "2026 DMU boundaries", minzoom: 0, local: "data/dmu.geojson",
     layers: [
       { type: "fill", paint: { "fill-color": "#000", "fill-opacity": 0 } },
