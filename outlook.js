@@ -67,8 +67,8 @@ function frontDrop(days, iso) {
 }
 
 // The weather and moon parts of the hours sheet:
-//   glance  summary card: right now (today only), the day's outlook, stands
-//           the wind suits, moon in one line
+//   glance  summary card: a verdict, right now (today only), the day's
+//           outlook, stands the wind suits, moon in one line
 //   strip   7-day picker
 //   detail  forecast wording, what the pressure means, moon times, solunar
 function renderOutlook({ glance, strip, detail }, place, iso, pt) {
@@ -76,7 +76,9 @@ function renderOutlook({ glance, strip, detail }, place, iso, pt) {
   const h = hoursOn(iso, place), isToday = iso === nowIn(tz).iso;
 
   const nowBox = el("div", "glance-now"), dayBox = el("div", "glance-day"), standBox = el("div", "glance-stands");
-  nowBox.hidden = !isToday; standBox.hidden = true;
+  const verdict = el("div", "verdict");
+  nowBox.hidden = !isToday; standBox.hidden = true; verdict.hidden = true;
+  glance.insertBefore(verdict, glance.children[1] || null);
   dayBox.append(el("p", "fine", "Loading forecast…"));
 
   const ph = moonPhase(iso, tz), ev = moonEvents(iso, tz, lat, lng);
@@ -115,7 +117,8 @@ function renderOutlook({ glance, strip, detail }, place, iso, pt) {
     if (!glance.isConnected || rules.date !== iso) return;
     if (isToday) fillNow(nowBox, fc);
     fillDay(dayBox, fc, iso, h, tz, fmt, isToday);
-    fillStands(standBox, fc, iso, h, tz, pt);
+    const stands = fillStands(standBox, fc, iso, h, tz, pt, fmt);
+    fillVerdict(verdict, fc, iso, h, tz, stands);
     fillWeatherMore(wxMore, fc, iso, tz, fmt);
     drawStrip(strip, fc, place, iso);
   });
@@ -180,27 +183,103 @@ function fillDay(box, fc, iso, h, tz, fmt, isToday) {
   if (rows.length) box.append(...rows);
 }
 
-// Your stands nearby that this day's morning or evening wind suits
+// Your stands nearby, with the stretches of legal light this day when the
+// wind suits each one, and what your hunt log says works there.
+// Returns { near, fit } counts for the verdict.
 const STAND_RANGE_KM = 25;
-function fillStands(box, fc, iso, h, tz, pt) {
+function fillStands(box, fc, iso, h, tz, pt, fmt) {
   box.hidden = true; box.replaceChildren();
-  if (!fc || !h || typeof pins === "undefined") return;
-  const mid = tzMidnight(iso, tz);
-  const am = periodAt(fc, new Date(mid + (h.open + 15) * 60000)), pm = periodAt(fc, new Date(mid + (h.close - 45) * 60000));
-  if (!am && !pm) return;
+  const none = { near: 0, fit: 0 };
+  if (!fc || !h || typeof pins === "undefined") return none;
   const near = pins.filter(p => p.winds?.length && kmBetween([p.lng, p.lat], pt) <= STAND_RANGE_KM);
-  if (!near.length) return;
-  const fits = near.map(p => ({ p, am: am && windMatches(am.dir, p.winds), pm: pm && windMatches(pm.dir, p.winds) }))
-    .filter(x => x.am || x.pm);
-  box.append(el("div", "glance-label", "Stands the wind suits"));
-  if (!fits.length) box.append(el("p", "plain", `None of your ${near.length} nearby stand${near.length === 1 ? "" : "s"} fit this day's wind.`));
-  for (const x of fits) {
+  if (!near.length) return none;
+  const mid = tzMidnight(iso, tz), open = mid + h.open * 60000, close = mid + h.close * 60000;
+  const from = Math.max(open, Date.now()), started = from > open;
+  if (from >= close) return none;   // legal light is over for the day
+  const hours = fc.periods.filter(p => +new Date(p.end) > open && +new Date(p.t) < close);
+  if (!hours.length) return none;
+  const rows = near.map(p => ({ p, wins: windWindows(hours, p.winds, from, close) }))
+    .sort((a, b) => b.wins.length - a.wins.length);
+  const fit = rows.filter(x => x.wins.length);
+  box.append(el("div", "glance-label", "Your stands nearby"));
+  for (const x of rows) {
     const b = el("button", "glance-stand");
     b.type = "button";
-    b.append(el("strong", null, x.p.name || PIN_TYPES[x.p.type]?.label || "Pin"), el("span", null, [x.am && "Morning", x.pm && "Evening"].filter(Boolean).join(" and ")));
+    if (!x.wins.length) b.classList.add("off");
+    const head = el("div", "gs-head");
+    head.append(el("strong", null, x.p.name || PIN_TYPES[x.p.type]?.label || "Pin"),
+      el("span", "gs-wins", x.wins.length ? x.wins.map(w => timeRange(fmt(w.start), fmt(w.end))).join(", ") : started ? "No good wind left" : "Wrong wind"));
+    b.append(head);
+    const pat = standPattern(x.p, hours);
+    if (pat) b.append(el("span", "gs-pattern" + (pat.today ? " today" : ""), pat.text));
     b.onclick = () => { closeSheet("sheet-rules"); document.body.classList.remove("show-crosshair"); map.flyTo({ center: [x.p.lng, x.p.lat], zoom: Math.max(map.getZoom(), 15) }); };
     box.append(b);
   }
+  box.append(el("p", "fine", "Times are when the forecast wind is one you picked for the stand, within legal hours."));
+  box.hidden = false;
+  return { near: near.length, fit: fit.length };
+}
+
+// "9:00 AM", "10:00 AM" -> "9–10 AM"
+function timeRange(a, b) {
+  const short = t => t.replace(/:00(?=\D|$)/, "");
+  a = short(a); b = short(b);
+  const ma = /\s?[AP]M$/i.exec(a), mb = /\s?[AP]M$/i.exec(b);
+  if (ma && mb && ma[0].trim() === mb[0].trim()) a = a.slice(0, -ma[0].length);
+  return `${a}–${b}`;
+}
+
+// Runs of forecast hours whose wind suits `good`, clipped to [from, to]
+function windWindows(hours, good, from, to) {
+  const out = [];
+  for (const p of hours) {
+    const s = Math.max(+new Date(p.t), from), e = Math.min(+new Date(p.end), to);
+    if (s >= e || !windMatches(p.dir, good)) continue;
+    const last = out.at(-1);
+    if (last && last.end === s) last.end = e; else out.push({ start: s, end: e });
+  }
+  return out.filter(w => w.end - w.start >= 30 * 60000);
+}
+
+// "Deer on 4 of 5 NW-wind sits", marked when this day's wind is that wind
+function standPattern(pin, hours) {
+  const st = pinStats(pin);
+  const best = st.groups?.find(g => g.title === "Wind")?.rows.find(r => r.sits >= 2 && r.deer > 0);
+  if (!best) return st.sits ? { text: `${st.sits} sit${st.sits === 1 ? "" : "s"} logged; patterns show after 3`, today: false } : null;
+  const label = best.value === "Calm" ? "calm" : `${best.value}-wind`;
+  const today = hours.some(p => dir8(isCalm(p) ? "Calm" : p.dir) === best.value);
+  return { text: `Your log: deer on ${best.deer} of ${best.sits} ${label} sits${today ? ` · ${best.value === "Calm" ? "calm" : best.value} is forecast` : ""}`, today };
+}
+
+// One line on how the day looks for deer movement, and why. Weighted by what
+// the GPS-collar studies found: a temperature drop matters most, a pressure
+// change some; strong wind, steady rain and heat keep deer bedded.
+function fillVerdict(box, fc, iso, h, tz, stands) {
+  box.hidden = true; box.replaceChildren();
+  const d = fc?.days?.find(x => x.date === iso);
+  if (!fc || !h || !d) return;
+  const mid = tzMidnight(iso, tz);
+  const huntHours = [periodAt(fc, new Date(mid + (h.open + 15) * 60000)), periodAt(fc, new Date(mid + (h.close - 45) * 60000))].filter(Boolean);
+  const plus = [], minus = [];
+  let score = 0;
+  const drop = frontDrop(fc.days, iso);
+  if (drop) { score += 2; plus.push(`cold snap (${drop}° cooler)`); }
+  const dp = dayPressure(fc, mid);
+  if (dp && dp.kind !== "steady") { score += 1; plus.push(dp.kind === "front" ? "front passing" : `pressure ${dp.kind}`); }
+  if (stands.fit) { score += 1; plus.push(`${stands.fit} stand${stands.fit === 1 ? "" : "s"} fit the wind`); }
+  else if (stands.near) { score -= 1; minus.push("no stand fits the wind"); }
+  const windy = Math.max(0, ...huntHours.map(p => p.mph));
+  if (windy >= 15) { score -= windy >= 25 ? 2 : 1; minus.push(`${windy >= 25 ? "very windy" : "windy"} (${windy} mph)`); }
+  const wet = Math.max(0, ...huntHours.map(p => p.pop ?? 0));
+  if (wet >= 60) { score -= 1; minus.push(`rain likely (${wet}%)`); }
+  const high = d.day?.temp;
+  if (high != null && high >= 70) { score -= 1; minus.push(`warm (high ${high}°)`); }
+  const [label, kind] = score >= 2 ? ["Good day to hunt", "good"] : score >= 0 ? ["Fair day", "fair"] : ["Slow day", "slow"];
+  box.dataset.kind = kind;
+  const why = [...plus.map(x => "+ " + x), ...minus.map(x => "− " + x)];
+  box.append(el("strong", "verdict-label", label),
+    el("span", "verdict-why", why.length ? why.join("  ") : "Nothing stands out either way"));
+  box.title = "A guide from the forecast, not a promise: temperature drops matter most in the studies, pressure changes some.";
   box.hidden = false;
 }
 
