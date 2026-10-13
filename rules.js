@@ -149,6 +149,30 @@ function renderChip() {
   chip.dataset.state = live ? live.state : "off";
   $("chip-main").textContent = h ? `${fmtMin(h.open)} – ${fmtMin(h.close)}` : "Deer hours";
   $("chip-sub").textContent = live ? `${live.text} · ${place.county} Co.` : `Not in the 2026 table · ${place.county} Co.`;
+  renderChipWx();
+}
+
+// Current weather under the hours: "42°F · NW 8 mph · 30.12 in falling · Cloudy"
+// (sky last, since long NWS wording gets cut off on a phone)
+const CHIP_TREND = { "⇈": "rising fast", "↑": "rising", "→": "steady", "↓": "falling", "⇊": "falling fast" };
+let chipWxSeq = 0;
+async function renderChipWx() {
+  if (typeof getForecast !== "function") return;
+  const seq = ++chipWxSeq, { pt } = rulesPoint();
+  const fc = await getForecast(pt[0], pt[1]);
+  if (seq !== chipWxSeq) return;   // the map moved on while this loaded
+  const line = $("chip-wx");
+  const now = fc && (periodAt(fc) || fc.periods[0]);
+  if (!now) { line.hidden = true; return; }
+  const inHg = pressureAt(fc, Date.now());
+  line.replaceChildren(el("span", "chip-temp", `${now.temp}°F`), " · ");
+  if (now.mph && now.dir) line.append(windArrow(now.dir), " ");
+  line.append(windText(now));
+  if (inHg != null) line.append(` · ${inHg.toFixed(2)} in ${CHIP_TREND[pressureArrow(fc, Date.now())] || ""}`.trimEnd());
+  line.append(` · ${now.sky}`);
+  line.title = fc.stale ? "Last forecast saved (no signal)" : "";
+  line.classList.toggle("stale", !!fc.stale);
+  line.hidden = false;
 }
 
 function el(tag, cls, text) {
