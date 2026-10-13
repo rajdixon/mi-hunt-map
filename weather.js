@@ -100,6 +100,8 @@ const PRESSURE_MEANING = {
   steady:  "Steady pressure means settled weather with no front nearby. Deer usually move less than when pressure is rising or falling, sticking to their normal dawn and dusk routine.",
   front:   "A front moves through: pressure falls as it arrives, bottoms out, then rises as it clears. Deer tend to move more on both sides of it, especially the clearing, often colder, side.",
 };
+// Words for pressureArrow, where an arrow could be mistaken for the wind
+const TREND_WORD = { "⇈": "rising fast", "↑": "rising", "→": "steady", "↓": "falling", "⇊": "falling fast" };
 const DAY_PRESSURE_ICON = { front: "↓↑", rising: "↑", falling: "↓", steady: "→" };
 
 // Group the NWS 12-hour periods into calendar days (in the forecast office's

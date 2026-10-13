@@ -66,15 +66,26 @@ function frontDrop(days, iso) {
   return i > 0 && a != null && b != null && a - b >= FRONT_DROP ? a - b : 0;
 }
 
-function renderOutlook(sec, place, iso, pt) {
+// The weather and moon parts of the hours sheet:
+//   glance  summary card: right now (today only), the day's outlook, stands
+//           the wind suits, moon in one line
+//   strip   7-day picker
+//   detail  forecast wording, what the pressure means, moon times, solunar
+function renderOutlook({ glance, strip, detail }, place, iso, pt) {
   const [lng, lat] = pt, tz = place.tz, fmt = fmtIn(tz);
-  const h = hoursOn(iso, place);
+  const h = hoursOn(iso, place), isToday = iso === nowIn(tz).iso;
 
-  const wx = el("div", "outlook-wx");
-  wx.append(el("p", "fine", "Loading forecast…"));
+  const nowBox = el("div", "glance-now"), dayBox = el("div", "glance-day"), standBox = el("div", "glance-stands");
+  nowBox.hidden = !isToday; standBox.hidden = true;
+  dayBox.append(el("p", "fine", "Loading forecast…"));
 
-  // Moon
   const ph = moonPhase(iso, tz), ev = moonEvents(iso, tz, lat, lng);
+  const moonLine = el("div", "glance-line");
+  moonLine.append(el("span", "glance-ico", ph.icon), `${ph.name} · ${ph.lit}% lit`);
+  glance.append(nowBox, dayBox, standBox, moonLine);
+
+  // Detail: weather wording, then moon and solunar
+  const wxMore = el("div", "outlook-wx");
   const moon = el("div", "moon");
   const icon = el("span", "moon-icon", ph.icon); icon.setAttribute("aria-hidden", "true");
   const mt = el("div", "moon-text");
@@ -93,33 +104,52 @@ function renderOutlook(sec, place, iso, pt) {
   solP.textContent = sol.length
     ? `Solunar periods in legal hours: ${sol.map(p => `${p.kind} ${fmt(p.start)}–${fmt(p.end)}`).join(", ")}.`
     : "No solunar periods fall in legal hours this day.";
-
-  const strip = el("div", "outlook-strip");
   const note = el("p", "fine",
     "Solunar times are a hunting tradition, not proven science: GPS-collar studies (Penn State, NC State, King Ranch) " +
     "found moon phase made little difference to deer movement. Temperature was the most consistent predictor, " +
     "so look for days marked as cold snaps. Pressure findings are mixed; a front passing (↓↑) usually brings the cold snap.");
-  sec.append(wx, moon, solP, strip, note);
+  detail.append(wxMore, moon, solP, note);
   drawStrip(strip, null, place, iso);
 
   getForecast(lng, lat).then(fc => {
-    if (!sec.isConnected || rules.date !== iso) return;
-    fillWeather(wx, fc, iso, h, tz, fmt);
+    if (!glance.isConnected || rules.date !== iso) return;
+    if (isToday) fillNow(nowBox, fc);
+    fillDay(dayBox, fc, iso, h, tz, fmt, isToday);
+    fillStands(standBox, fc, iso, h, tz, pt);
+    fillWeatherMore(wxMore, fc, iso, tz, fmt);
     drawStrip(strip, fc, place, iso);
   });
 }
 
-function fillWeather(wx, fc, iso, h, tz, fmt) {
-  wx.replaceChildren();
-  if (!fc) { wx.append(el("p", "fine", "Forecast unavailable. It needs a signal the first time.")); return; }
+// Right now: temperature, sky, wind, pressure and its 3-hour trend
+function fillNow(box, fc) {
+  const p = fc && periodAt(fc);
+  if (!p) { box.hidden = true; return; }
+  const pr = pressureAt(fc, Date.now());
+  const big = el("div", "now-temp", `${p.temp}°`);
+  const facts = el("div", "now-facts");
+  facts.append(el("strong", null, p.sky));
+  const wind = el("span");
+  if (p.mph && p.dir) wind.append(windArrow(p.dir), " ");
+  wind.append(`Wind ${windText(p)}`);
+  facts.append(wind);
+  const bits = [pr != null && `${pr.toFixed(2)} in ${TREND_WORD[pressureArrow(fc, Date.now())] || ""}`.trim(),
+                p.pop ? `${p.pop}% rain` : ""].filter(Boolean);
+  if (bits.length) facts.append(el("span", null, bits.join(" · ")));
+  box.replaceChildren(el("div", "glance-label", `Right now${fc.stale ? " (last saved forecast)" : ""}`), el("div", "now-row"));
+  box.lastChild.append(big, facts);
+}
+
+// The day: high/low, sky, cold snap, pressure, first light and last hour
+function fillDay(box, fc, iso, h, tz, fmt, isToday) {
+  box.replaceChildren();
+  if (!fc) { box.append(el("p", "fine", "Forecast unavailable. It needs a signal the first time.")); return; }
   const d = fc.days?.find(x => x.date === iso);
   const mid = tzMidnight(iso, tz);
   const at = min => periodAt(fc, new Date(mid + min * 60000));
   const first = h && at(h.open + 15), lastH = h && at(h.close - 45);
-  if (!d && !first && !lastH) {
-    wx.append(el("p", "fine", "The NWS forecast covers the next 7 days."));
-    return;
-  }
+  if (!d && !first && !lastH) { box.append(el("p", "fine", "The NWS forecast covers the next 7 days.")); return; }
+  box.append(el("div", "glance-label", isToday ? "Today's outlook" : "Outlook"));
   if (d) {
     const top = el("div", "wx-top");
     const temps = el("strong", "wx-temps",
@@ -129,15 +159,15 @@ function fillWeather(wx, fc, iso, h, tz, fmt) {
     const part = d.day || d.night;
     right.append(el("span", null, part.sky), el("span", "fine", `${lbl}${part.pop ? ` · ${part.pop}% rain` : ""}`));
     top.append(temps, right);
-    wx.append(top);
+    box.append(top);
     const drop = frontDrop(fc.days, iso);
-    if (drop) wx.append(el("div", "wx-front", `Cold snap: high ${drop}° cooler than the day before`));
+    if (drop) box.append(el("div", "wx-front", `Cold snap: high ${drop}° cooler than the day before`));
   }
   const dp = dayPressure(fc, mid);
   if (dp) {
     const pe = el("div", "wx-pressure", dayPressureText(dp, fmt));
     pe.dataset.kind = dp.kind;
-    wx.append(pe, el("p", "fine wx-meaning", PRESSURE_MEANING[dp.kind]));
+    box.append(pe);
   }
   const line = (label, p, min) => {
     if (!p) return null;
@@ -147,10 +177,53 @@ function fillWeather(wx, fc, iso, h, tz, fmt) {
   };
   const rows = [line(`First light (${fmtMin(h.open)})`, first, h?.open + 15),
                 line(`Last hour (${fmtMin(h.close - 60)})`, lastH, h?.close - 45)].filter(Boolean);
-  if (rows.length) wx.append(...rows);
-  if (d?.day?.text) wx.append(el("p", "fine wx-detail", d.day.text));
-  else if (d?.night?.text) wx.append(el("p", "fine wx-detail", `Tonight: ${d.night.text}`));
-  wx.append(el("p", "fine", `NWS forecast${fc.pressure ? ", pressure from Open-Meteo" : ""} · ${ageText(fc)}${fc.stale ? " (no signal)" : ""}` +
+  if (rows.length) box.append(...rows);
+}
+
+// Your stands nearby that this day's morning or evening wind suits
+const STAND_RANGE_KM = 25;
+function fillStands(box, fc, iso, h, tz, pt) {
+  box.hidden = true; box.replaceChildren();
+  if (!fc || !h || typeof pins === "undefined") return;
+  const mid = tzMidnight(iso, tz);
+  const am = periodAt(fc, new Date(mid + (h.open + 15) * 60000)), pm = periodAt(fc, new Date(mid + (h.close - 45) * 60000));
+  if (!am && !pm) return;
+  const near = pins.filter(p => p.winds?.length && kmBetween([p.lng, p.lat], pt) <= STAND_RANGE_KM);
+  if (!near.length) return;
+  const fits = near.map(p => ({ p, am: am && windMatches(am.dir, p.winds), pm: pm && windMatches(pm.dir, p.winds) }))
+    .filter(x => x.am || x.pm);
+  box.append(el("div", "glance-label", "Stands the wind suits"));
+  if (!fits.length) box.append(el("p", "plain", `None of your ${near.length} nearby stand${near.length === 1 ? "" : "s"} fit this day's wind.`));
+  for (const x of fits) {
+    const b = el("button", "glance-stand");
+    b.type = "button";
+    b.append(el("strong", null, x.p.name || PIN_TYPES[x.p.type]?.label || "Pin"), el("span", null, [x.am && "Morning", x.pm && "Evening"].filter(Boolean).join(" and ")));
+    b.onclick = () => { closeSheet("sheet-rules"); document.body.classList.remove("show-crosshair"); map.flyTo({ center: [x.p.lng, x.p.lat], zoom: Math.max(map.getZoom(), 15) }); };
+    box.append(b);
+  }
+  box.hidden = false;
+}
+
+function kmBetween(a, b) {
+  const r = Math.PI / 180, dLat = (b[1] - a[1]) * r, dLng = (b[0] - a[0]) * r;
+  const s = Math.sin(dLat / 2) ** 2 + Math.cos(a[1] * r) * Math.cos(b[1] * r) * Math.sin(dLng / 2) ** 2;
+  return 12742 * Math.asin(Math.sqrt(s));
+}
+
+// Detail: the NWS wording, what the pressure means, and where it all comes from
+function fillWeatherMore(box, fc, iso, tz, fmt) {
+  box.replaceChildren();
+  if (!fc) return;
+  const d = fc.days?.find(x => x.date === iso);
+  if (d?.day?.text) box.append(el("p", "plain wx-detail", d.day.text));
+  if (d?.night?.text) box.append(el("p", "plain wx-detail", `Tonight: ${d.night.text}`));
+  const dp = dayPressure(fc, tzMidnight(iso, tz));
+  if (dp) {
+    const pe = el("div", "wx-pressure", dayPressureText(dp, fmt));
+    pe.dataset.kind = dp.kind;
+    box.append(pe, el("p", "fine wx-meaning", PRESSURE_MEANING[dp.kind]));
+  }
+  box.append(el("p", "fine", `NWS forecast${fc.pressure ? ", pressure from Open-Meteo" : ""} · ${ageText(fc)}${fc.stale ? " (no signal)" : ""}` +
     (fc.pressure ? ". Arrows show the last 3 hours: ⇈/⇊ is a rapid change (0.06 in or more)." : "")));
 }
 

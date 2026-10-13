@@ -154,7 +154,6 @@ function renderChip() {
 
 // Current weather under the hours: "42°F · NW 8 mph · 30.12 in falling · Cloudy"
 // (sky last, since long NWS wording gets cut off on a phone)
-const CHIP_TREND = { "⇈": "rising fast", "↑": "rising", "→": "steady", "↓": "falling", "⇊": "falling fast" };
 let chipWxSeq = 0;
 async function renderChipWx() {
   if (typeof getForecast !== "function") return;
@@ -168,7 +167,7 @@ async function renderChipWx() {
   line.replaceChildren(el("span", "chip-temp", `${now.temp}°F`), " · ");
   if (now.mph && now.dir) line.append(windArrow(now.dir), " ");
   line.append(windText(now));
-  if (inHg != null) line.append(` · ${inHg.toFixed(2)} in ${CHIP_TREND[pressureArrow(fc, Date.now())] || ""}`.trimEnd());
+  if (inHg != null) line.append(` · ${inHg.toFixed(2)} in ${TREND_WORD[pressureArrow(fc, Date.now())] || ""}`.trimEnd());
   line.append(` · ${now.sky}`);
   line.title = fc.stale ? "Last forecast saved (no signal)" : "";
   line.classList.toggle("stale", !!fc.stale);
@@ -211,8 +210,7 @@ function renderRules() {
   if (!rules.date || rules.date < first || rules.date > last) rules.date = today >= first && today <= last ? today : first;
   const iso = rules.date;
 
-  // Hours
-  const hs = section("Legal hunting hours", rules.data.hours.page);
+  // Day picker
   const nav = el("div", "date-nav");
   const prev = el("button", "date-step", "‹"); prev.setAttribute("aria-label", "Previous day");
   const next = el("button", "date-step", "›"); next.setAttribute("aria-label", "Next day");
@@ -228,25 +226,47 @@ function renderRules() {
     back.onclick = () => { rules.date = today; renderRules(); };
     nav.append(back);
   }
-  hs.append(nav);
+  body.append(nav);
 
+  // ---- Summary: hours, right now, the day's outlook, stands, moon, seasons ----
+  const glance = el("div", "glance");
+  glance.append(el("div", "glance-title", iso === today ? "Today at a glance" : fmtLong.format(new Date(iso + "T00:00:00Z"))));
   const h = hoursOn(iso, place);
   const big = el("div", "hours-big");
   big.append(el("div", "hours-col", ""), el("div", "hours-col", ""));
   big.children[0].append(el("span", "hours-label", "Opens"), el("strong", null, fmtMin(h.open)));
   big.children[1].append(el("span", "hours-label", "Closes"), el("strong", null, fmtMin(h.close)));
-  hs.append(el("div", "hours-date", fmtLong.format(new Date(iso + "T00:00:00Z"))), big);
+  glance.append(big);
   if (iso === today) {
     const live = liveStatus(place);
     if (live) {
       const p = el("div", "live", `${live.text}${live.sub ? " · " + live.sub : ""}`);
       p.dataset.state = live.state;
-      hs.append(p);
+      glance.append(p);
     }
   }
+  const strip = el("div", "outlook-strip");
+  const wxDetail = section("Weather details");
+  renderOutlook({ glance, strip, detail: wxDetail }, place, iso, pt);
+  const open = seasonsOn(iso, place);
+  const sl = el("div", "glance-line");
+  if (open.length) sl.append(el("span", "glance-ico", "🦌"), `Open: ${open.map(s => s.name).join(", ")}`);
+  else {
+    const n = nextSeason(iso, place);
+    sl.append(el("span", "glance-ico", "🦌"), n ? `No deer season open. Next: ${n.name}, ${short(n.start)}` : "No deer season open");
+  }
+  glance.append(sl);
+  body.append(glance);
+
+  // Next 7 days, tap one to pick it
+  body.append(el("div", "week-title", "Next 7 days: moon, high / low, ▼ cold snap, pressure"), strip);
+
+  // ---- Details ----
+  body.append(el("h3", "detail-head", "More detail"));
+
+  const hs = section("Legal hunting hours", rules.data.hours.page);
   const adj = place.central ? `, minus 1 hour for Central Time` : "";
   hs.append(el("p", "fine", `${tzLabel}. Zone A table ${h.base[0]} a.m. / ${h.base[1]} p.m., plus ${place.offset} min for zone ${place.zone}${adj}.`));
-
   const week = el("table", "week");
   week.innerHTML = `<thead><tr><th>Day</th><th>Opens</th><th>Closes</th></tr></thead>`;
   const tb = el("tbody");
@@ -262,14 +282,10 @@ function renderRules() {
   if (tb.children.length) { hs.append(el("div", "week-title", "Following days")); hs.append(week); }
   body.append(hs);
 
-  // Weather and moon (outlook.js)
-  const os = section("Weather and moon");
-  renderOutlook(os, place, iso, pt);
-  body.append(os);
+  body.append(wxDetail);
 
   // Seasons
   const ss = section(iso === today ? "Seasons open today" : "Seasons open this day", rules.data.seasonsPage);
-  const open = seasonsOn(iso, place);
   if (open.length) {
     const ul = el("ul", "season-list");
     for (const s of open) {

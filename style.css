@@ -197,6 +197,22 @@ body:has(.sheet:not([hidden])) .coords { opacity: 0; }
 .live { margin-top: 10px; padding: 8px 12px; border-radius: 10px; font-weight: 600; background: var(--panel-2); border-left: 4px solid var(--ink-dim); }
 .live[data-state="open"] { border-left-color: var(--ok); }
 .live[data-state="before"] { border-left-color: var(--blaze); }
+.glance { margin-top: 12px; padding: 14px; border-radius: 14px; background: var(--panel-2); border: 1px solid var(--line); display: grid; gap: 10px; }
+.glance .hours-big { margin-top: 0; }
+.glance .live { margin-top: 0; background: var(--panel); }
+.glance-title { font: 700 17px/1.2 var(--display); letter-spacing: .02em; }
+.glance-label { font: 600 11.5px/1 var(--display); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-dim); margin-bottom: 6px; }
+.glance-now, .glance-day, .glance-stands { display: grid; gap: 6px; border-top: 1px solid var(--line); padding-top: 10px; }
+.glance-now .glance-label, .glance-day .glance-label, .glance-stands .glance-label { margin-bottom: 0; }
+.now-row { display: flex; align-items: center; gap: 14px; }
+.now-temp { font: 700 40px/1 var(--display); font-variant-numeric: tabular-nums; }
+.now-facts { display: grid; gap: 2px; font-size: 14px; min-width: 0; }
+.now-facts .wind-arrow { font-size: 15px; }
+.glance-line { display: flex; align-items: center; gap: 8px; font-size: 14px; border-top: 1px solid var(--line); padding-top: 10px; }
+.glance-ico { font-size: 20px; line-height: 1; }
+.glance-stand { display: flex; justify-content: space-between; gap: 10px; padding: 8px 10px; border-radius: 10px; background: var(--panel); border: 1px solid var(--line); color: var(--ink); text-align: left; font-size: 14px; }
+.glance-stand span { color: var(--ok); font-weight: 600; white-space: nowrap; }
+.detail-head { margin: 26px 0 0; font: 700 15px/1.2 var(--display); letter-spacing: .08em; text-transform: uppercase; }
 .week-title { margin-top: 14px; font-size: 13px; color: var(--ink-dim); }
 .week { width: 100%; margin-top: 6px; border-collapse: collapse; font-variant-numeric: tabular-nums; }
 .week th { text-align: left; font: 600 12px/1 var(--display); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-dim); padding: 6px 0; }
