@@ -92,7 +92,13 @@ function liveStatus(place) {
   if (now.min < h.open) return { state: "before", text: `Opens ${fmtMin(h.open)}`, sub: `in ${dur(h.open - now.min)}` };
   if (now.min <= h.close) return { state: "open", text: `Legal until ${fmtMin(h.close)}`, sub: `${dur(h.close - now.min)} left` };
   const t = hoursOn(addDays(now.iso, 1), place);
-  return { state: "after", text: "Closed for today", sub: t ? `Opens ${fmtMin(t.open)} tomorrow` : "" };
+  return { state: "after", text: "Closed for today", sub: t ? `Opens ${fmtMin(t.open)} tomorrow, in ${dur(1440 - now.min + t.open)}` : "" };
+}
+
+// The day to plan for: today, or tomorrow once today's legal light is over
+function huntDay(place) {
+  const now = nowIn(place.tz), h = hoursOn(now.iso, place);
+  return h && now.min > h.close && hoursOn(addDays(now.iso, 1), place) ? addDays(now.iso, 1) : now.iso;
 }
 
 // ---------- Seasons & rules ----------
@@ -144,30 +150,43 @@ function renderChip() {
   const chip = $("hours-chip");
   const place = placeAt(rulesPoint().pt);
   if (!place) { chip.hidden = true; return; }
-  const now = nowIn(place.tz), h = hoursOn(now.iso, place), live = liveStatus(place);
+  const now = nowIn(place.tz), day = huntDay(place), live = liveStatus(place);
   chip.hidden = false;
   chip.dataset.state = live ? live.state : "off";
+  if (day !== now.iso) {
+    // Today's hunt is over: show tomorrow's
+    const t = hoursOn(day, place);
+    $("chip-main").textContent = `${fmtMin(t.open)} – ${fmtMin(t.close)}`;
+    $("chip-sub").textContent = `Tomorrow · opens in ${dur(1440 - now.min + t.open)} · ${place.county} Co.`;
+    renderChipWx(place, day, t);
+    return;
+  }
+  const h = hoursOn(now.iso, place);
   $("chip-main").textContent = h ? `${fmtMin(h.open)} – ${fmtMin(h.close)}` : "Deer hours";
   $("chip-sub").textContent = live ? `${live.text} · ${place.county} Co.` : `Not in the 2026 table · ${place.county} Co.`;
   renderChipWx();
 }
 
-// Current weather under the hours: "42°F · NW 8 mph · 30.12 in falling · Cloudy"
-// (sky last, since long NWS wording gets cut off on a phone)
+// Weather under the hours: "42°F · NW 8 mph · 30.12 in falling · Cloudy"
+// (sky last, since long NWS wording gets cut off on a phone). Current weather,
+// or the forecast for first light when the chip shows tomorrow (`day`, `h`).
 let chipWxSeq = 0;
-async function renderChipWx() {
+async function renderChipWx(place, day, h) {
   if (typeof getForecast !== "function") return;
   const seq = ++chipWxSeq, { pt } = rulesPoint();
   const fc = await getForecast(pt[0], pt[1]);
   if (seq !== chipWxSeq) return;   // the map moved on while this loaded
   const line = $("chip-wx");
-  const now = fc && (periodAt(fc) || fc.periods[0]);
+  const at = day ? tzMidnight(day, place.tz) + (h.open + 15) * 60000 : Date.now();
+  const now = fc && (periodAt(fc, new Date(at)) || (!day && fc.periods[0]));
   if (!now) { line.hidden = true; return; }
-  const inHg = pressureAt(fc, Date.now());
-  line.replaceChildren(el("span", "chip-temp", `${now.temp}°F`), " · ");
+  const inHg = pressureAt(fc, at);
+  line.replaceChildren();
+  if (day) line.append("First light ");
+  line.append(el("span", "chip-temp", `${now.temp}°F`), " · ");
   if (now.mph && now.dir) line.append(windArrow(now.dir), " ");
   line.append(windText(now));
-  if (inHg != null) line.append(` · ${inHg.toFixed(2)} in ${TREND_WORD[pressureArrow(fc, Date.now())] || ""}`.trimEnd());
+  if (inHg != null) line.append(` · ${inHg.toFixed(2)} in ${TREND_WORD[pressureArrow(fc, at)] || ""}`.trimEnd());
   line.append(` · ${now.sky}`);
   line.title = fc.stale ? "Last forecast saved (no signal)" : "";
   line.classList.toggle("stale", !!fc.stale);
@@ -207,7 +226,8 @@ function renderRules() {
 
   const today = nowIn(place.tz).iso;
   const t = rules.data.hours.zoneA, first = Object.keys(t)[0], last = Object.keys(t).at(-1);
-  if (!rules.date || rules.date < first || rules.date > last) rules.date = today >= first && today <= last ? today : first;
+  const day = huntDay(place);
+  if (!rules.date || rules.date < first || rules.date > last) rules.date = day >= first && day <= last ? day : first;
   const iso = rules.date;
 
   // Day picker
@@ -221,23 +241,23 @@ function renderRules() {
   next.onclick = () => { rules.date = addDays(iso, 1); renderRules(); };
   input.onchange = () => { if (input.value) { rules.date = input.value; renderRules(); } };
   nav.append(prev, input, next);
-  if (iso !== today && today >= first && today <= last) {
-    const back = el("button", "date-today", "Today");
-    back.onclick = () => { rules.date = today; renderRules(); };
+  if (iso !== day && day >= first && day <= last) {
+    const back = el("button", "date-today", day === today ? "Today" : "Tomorrow");
+    back.onclick = () => { rules.date = day; renderRules(); };
     nav.append(back);
   }
   body.append(nav);
 
   // ---- Summary: hours, right now, the day's outlook, stands, moon, seasons ----
   const glance = el("div", "glance");
-  glance.append(el("div", "glance-title", iso === today ? "Today at a glance" : fmtLong.format(new Date(iso + "T00:00:00Z"))));
+  glance.append(el("div", "glance-title", iso === today ? "Today at a glance" : iso === addDays(today, 1) ? "Tomorrow at a glance" : fmtLong.format(new Date(iso + "T00:00:00Z"))));
   const h = hoursOn(iso, place);
   const big = el("div", "hours-big");
   big.append(el("div", "hours-col", ""), el("div", "hours-col", ""));
   big.children[0].append(el("span", "hours-label", "Opens"), el("strong", null, fmtMin(h.open)));
   big.children[1].append(el("span", "hours-label", "Closes"), el("strong", null, fmtMin(h.close)));
   glance.append(big);
-  if (iso === today) {
+  if (iso === day) {
     const live = liveStatus(place);
     if (live) {
       const p = el("div", "live", `${live.text}${live.sub ? " · " + live.sub : ""}`);

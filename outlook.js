@@ -67,17 +67,18 @@ function frontDrop(days, iso) {
 }
 
 // The weather and moon parts of the hours sheet:
-//   glance  summary card: a verdict, right now (today only), the day's
+//   glance  summary card: a verdict, right now (on the day being planned), the day's
 //           outlook, stands the wind suits, moon in one line
 //   strip   7-day picker
 //   detail  forecast wording, what the pressure means, moon times, solunar
 function renderOutlook({ glance, strip, detail }, place, iso, pt) {
   const [lng, lat] = pt, tz = place.tz, fmt = fmtIn(tz);
-  const h = hoursOn(iso, place), isToday = iso === nowIn(tz).iso;
+  const h = hoursOn(iso, place), today = nowIn(tz).iso, isToday = iso === today;
+  const showNow = iso === huntDay(place);   // today, or tomorrow after legal light ends
 
   const nowBox = el("div", "glance-now"), dayBox = el("div", "glance-day"), standBox = el("div", "glance-stands");
   const verdict = el("div", "verdict");
-  nowBox.hidden = !isToday; standBox.hidden = true; verdict.hidden = true;
+  nowBox.hidden = !showNow; standBox.hidden = true; verdict.hidden = true;
   glance.insertBefore(verdict, glance.children[1] || null);
   dayBox.append(el("p", "fine", "Loading forecast…"));
 
@@ -115,8 +116,8 @@ function renderOutlook({ glance, strip, detail }, place, iso, pt) {
 
   getForecast(lng, lat).then(fc => {
     if (!glance.isConnected || rules.date !== iso) return;
-    if (isToday) fillNow(nowBox, fc);
-    fillDay(dayBox, fc, iso, h, tz, fmt, isToday);
+    if (showNow) fillNow(nowBox, fc);
+    fillDay(dayBox, fc, iso, h, tz, fmt, isToday ? "Today's outlook" : iso === addDays(today, 1) ? "Tomorrow's outlook" : "Outlook");
     const stands = fillStands(standBox, fc, iso, h, tz, pt, fmt);
     fillVerdict(verdict, fc, iso, h, tz, stands);
     fillWeatherMore(wxMore, fc, iso, tz, fmt);
@@ -144,7 +145,7 @@ function fillNow(box, fc) {
 }
 
 // The day: high/low, sky, cold snap, pressure, first light and last hour
-function fillDay(box, fc, iso, h, tz, fmt, isToday) {
+function fillDay(box, fc, iso, h, tz, fmt, label) {
   box.replaceChildren();
   if (!fc) { box.append(el("p", "fine", "Forecast unavailable. It needs a signal the first time.")); return; }
   const d = fc.days?.find(x => x.date === iso);
@@ -152,7 +153,7 @@ function fillDay(box, fc, iso, h, tz, fmt, isToday) {
   const at = min => periodAt(fc, new Date(mid + min * 60000));
   const first = h && at(h.open + 15), lastH = h && at(h.close - 45);
   if (!d && !first && !lastH) { box.append(el("p", "fine", "The NWS forecast covers the next 7 days.")); return; }
-  box.append(el("div", "glance-label", isToday ? "Today's outlook" : "Outlook"));
+  box.append(el("div", "glance-label", label));
   if (d) {
     const top = el("div", "wx-top");
     const temps = el("strong", "wx-temps",
