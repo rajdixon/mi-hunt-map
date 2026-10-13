@@ -23,22 +23,39 @@ function setGroup(g, name) {
   if (hasPartners()) pollWhere(); else stopWhere();
 }
 
-// ---------- Share toggles (pin editor, line/area editor, tracks) ----------
-function renderShareToggle(boxId, item) {
+// ---------- Share toggles (pin editor, line/area editor) ----------
+// Sharing an item shares its spot, name and type only. Notes, winds, the hunt
+// log and photos each go along only if ticked; the server strips the rest.
+const SHARE_EXTRAS = {
+  pin: [["shareNotes", "Notes"], ["shareWinds", "Good winds"], ["shareLog", "Hunt log"], ["sharePhotos", "Photos"]],
+  shape: [["shareNotes", "Notes"]],
+};
+function renderShareToggle(boxId, item, kind = "pin") {
   const box = $(boxId);
   box.replaceChildren();
   box.hidden = !hasPartners();
   if (box.hidden) return;
-  const id = `${boxId}-cb`;
-  const label = el("label", "share-check");
-  label.htmlFor = id;
-  const cb = el("input"); cb.type = "checkbox"; cb.id = id; cb.checked = !!item?.shared;
-  label.append(cb, el("span", null, `Share with ${group.partners.map(p => p.name).join(", ")}`));
-  box.append(label);
+  const check = (id, text, on) => {
+    const label = el("label", "share-check"); label.htmlFor = id;
+    const cb = el("input"); cb.type = "checkbox"; cb.id = id; cb.checked = !!on;
+    label.append(cb, el("span", null, text));
+    return [label, cb];
+  };
+  const [main, cb] = check(`${boxId}-cb`, `Share with ${group.partners.map(p => p.name).join(", ")}`, item?.shared);
+  const extras = el("div", "share-extras");
+  extras.append(el("span", "fine", kind === "pin" ? "They see the spot, name and type. Also share:" : "They see the line or area and its name. Also share:"));
+  for (const [k, text] of SHARE_EXTRAS[kind]) extras.append(check(`${boxId}-${k}`, text, item?.[k])[0]);
+  extras.hidden = !cb.checked;
+  cb.onchange = () => { extras.hidden = !cb.checked; };
+  box.append(main, extras);
 }
-function readShareToggle(boxId) {
+// { shared, shareNotes, ... } from the toggles, or undefined when they aren't shown
+function readShareToggle(boxId, kind = "pin") {
   const cb = $(`${boxId}-cb`);
-  return cb && !$(boxId).hidden ? cb.checked : undefined;
+  if (!cb || $(boxId).hidden) return undefined;
+  const out = { shared: cb.checked };
+  for (const [k] of SHARE_EXTRAS[kind]) out[k] = cb.checked && !!$(`${boxId}-${k}`)?.checked;
+  return out;
 }
 
 // ---------- Partners' things on the map ----------
@@ -136,7 +153,7 @@ function openPartnerPin(pin, partner) {
   showPartnerInfo(`${partner.name}'s ${t.label.toLowerCase()}`, pin.name || t.label, [
     ["Notes", pin.notes],
     ["Good winds", pin.winds?.length ? pin.winds.join(", ") : ""],
-    ["Their patterns", statsSummary(pin)],
+    ["Their patterns", pin.log?.length ? statsSummary(pin) : ""],
     ["From you", lastFix ? `${fmtDist(distMeters(lastFix, [pin.lng, pin.lat]))} ${bearing(lastFix, [pin.lng, pin.lat])}` : ""],
     ["Location", `${pin.lat.toFixed(5)}, ${pin.lng.toFixed(5)}`],
   ], extra);

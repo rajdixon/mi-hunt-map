@@ -271,6 +271,8 @@ body:has(.sheet:not([hidden])) .coords { opacity: 0; }
   background: var(--panel-2); border: 1px solid var(--line); margin-left: auto; }
 .top-btn svg { width: 20px; height: 20px; stroke: var(--ink); stroke-width: 2.4; stroke-linecap: round; }
 .top-btn + .status { margin-left: 0; }
+.top-btn + .top-btn { margin-left: -2px; }
+@media (max-width: 389px) { .brand-name { font-size: 17px; } .topbar { gap: 8px; } }
 .search-form { display: flex; gap: 8px; margin-top: 12px; }
 .search-form input { flex: 1; min-width: 0; font: 16px var(--body); color: var(--ink); background: var(--panel-2);
   border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
@@ -492,3 +494,24 @@ body.shape-labels .shape-label { display: block; }
 .partner-pin .pin-dot { position: relative; }
 .partner-badge { position: absolute; right: -6px; bottom: -6px; width: 16px; height: 16px; border-radius: 50%;
   background: #4fc3f7; color: #0b1a22; font: 700 10px/16px var(--display); text-align: center; border: 1.5px solid #fff; }
+.share-extras { display: grid; gap: 0; margin-left: 30px; padding-left: 10px; border-left: 2px solid var(--line); }
+.share-extras .share-check { padding: 5px 0; }
+
+/* Settings */
+:root { --ui-zoom: 1; }
+.hours-chip, .rec-pill, .fab-stack, .sheet, .measure-bar, .goto-bar, .radar-bar, .coords,
+.pin-label, .shape-label, .ph-label, .moved-card, .viewer-bottom { zoom: var(--ui-zoom); }
+.seg { display: flex; flex-wrap: wrap; gap: 6px; }
+.seg button { flex: 1 1 auto; padding: 9px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel-2); color: var(--ink); font-weight: 600; font-size: 14px; }
+.seg button[aria-checked="true"] { background: var(--blaze); border-color: var(--blaze); color: #fff; }
+.setting-row { align-items: flex-start; }
+.setting-row > span { display: grid; gap: 2px; }
+.setting-row input { margin-top: 2px; }
+.settings-about { margin-top: 18px; border-top: 1px solid var(--line); }
+body.no-labels :is(.pin-label, .shape-label, .ph-label) { display: none !important; }
+/* Night mode: everything red and dim, like a red headlamp */
+body.night::after { content: ""; position: fixed; inset: 0; z-index: 10000; pointer-events: none; background: #b80000; mix-blend-mode: multiply; }
+/* Zoom scales offsets too; keep these anchored where they are at normal size */
+.hours-chip { top: calc((var(--safe-t) + 64px) / var(--ui-zoom)); left: calc(12px / var(--ui-zoom)); }
+.rec-pill { top: calc((var(--safe-t) + 150px) / var(--ui-zoom)); }
+.hours-chip[hidden] + .rec-pill { top: calc((var(--safe-t) + 64px) / var(--ui-zoom)); }

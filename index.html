@@ -32,6 +32,9 @@
   <button id="btn-draw" class="top-btn" aria-label="Draw a line or area" title="Draw" aria-pressed="false">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l1-4L16 5l3 3L8 19Z" fill="none"/><path d="m14 7 3 3" fill="none"/></svg>
   </button>
+  <button id="btn-settings" class="top-btn" aria-label="Settings" title="Settings">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2" fill="none"/><path d="M12 2.8v2.6M12 18.6v2.6M2.8 12h2.6M18.6 12h2.6M5.5 5.5l1.8 1.8M16.7 16.7l1.8 1.8M5.5 18.5l1.8-1.8M16.7 7.3l1.8-1.8" fill="none"/><circle cx="12" cy="12" r="6.6" fill="none"/></svg>
+  </button>
   <div id="status" class="status" data-state="off" role="status" aria-live="polite">
     <span class="status-dot" aria-hidden="true"></span>
     <span id="status-text">Tap ◎ to check your spot</span>
@@ -298,6 +301,15 @@
   </form>
 </section>
 
+<section id="sheet-settings" class="sheet" hidden aria-label="Settings">
+  <div class="sheet-grip" aria-hidden="true"></div>
+  <div class="sheet-head">
+    <h2>Settings</h2>
+    <button class="sheet-close" data-close="sheet-settings" aria-label="Close">×</button>
+  </div>
+  <div id="settings-body"></div>
+</section>
+
 <section id="sheet-tracks" class="sheet" hidden aria-label="Tracks">
   <div class="sheet-grip" aria-hidden="true"></div>
   <div class="sheet-head">
@@ -359,6 +371,7 @@
 <script src="radar.js"></script>
 <script src="goto.js"></script>
 <script src="draw.js"></script>
+<script src="settings.js"></script>
 <script src="sync.js"></script>
 
 <div id="photo-viewer" class="photo-viewer" hidden role="dialog" aria-modal="true" aria-label="Photo">

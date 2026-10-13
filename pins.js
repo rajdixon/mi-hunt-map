@@ -244,7 +244,7 @@ $("pin-form").addEventListener("submit", e => {
   editing.name = $("pin-name").value.trim();
   editing.notes = $("pin-notes").value.trim();
   const sh = typeof readShareToggle === "function" ? readShareToggle("pin-share") : undefined;
-  if (sh !== undefined) editing.shared = sh;
+  if (sh) Object.assign(editing, sh);
   if (editing.id) pins = pins.map(p => p.id === editing.id ? { ...editing } : p);
   else pins.push({ ...editing, id: newId(), created: Date.now() });
   savePins();

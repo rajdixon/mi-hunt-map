@@ -192,7 +192,7 @@ function openShapeEditor(s) {
   }
   for (const id of ["btn-shape-redraw", "btn-shape-delete"]) $(id).hidden = isNew;
   const del = $("btn-shape-delete"); del.classList.remove("confirm"); del.textContent = "Delete";
-  if (typeof renderShareToggle === "function") renderShareToggle("shape-share", shapeEditing);
+  if (typeof renderShareToggle === "function") renderShareToggle("shape-share", shapeEditing, "shape");
   // Show the draft while naming a new one
   if (isNew) { map.getSource("draw")?.setData(shapesFC([{ ...s, id: "draft" }])); }
   openSheet("sheet-shape");
@@ -207,8 +207,8 @@ function closeShapeEditor() {
 $("shape-form").addEventListener("submit", e => {
   e.preventDefault();
   const s = { ...shapeEditing, name: $("shape-name").value.trim(), notes: $("shape-notes").value.trim() };
-  const sh = typeof readShareToggle === "function" ? readShareToggle("shape-share") : undefined;
-  if (sh !== undefined) s.shared = sh;
+  const sh = typeof readShareToggle === "function" ? readShareToggle("shape-share", "shape") : undefined;
+  if (sh) Object.assign(s, sh);
   if (s.id) shapes = shapes.map(x => x.id === s.id ? s : x);
   else shapes.push({ ...s, id: newId(), created: Date.now() });
   saveShapes();

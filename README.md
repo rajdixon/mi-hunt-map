@@ -94,7 +94,11 @@ The hunting-hours sheet (tap the hours chip) shows, for the chosen day: the NWS 
 
 ## Hunting partners
 
-Set `HUNT_GROUP` in `~/.config/mi-hunt.env` on webserver02 to the partners' emails, yours included (comma-separated), add the same emails to the Cloudflare Access policy, and restart (`systemctl --user restart mi-hunt`). Each person keeps their own private data; pins, tracks, lines and areas marked "Share" are copied to `~/mi-hunt-data/group.json` on every sync and show read-only on the partners' maps (pins with a letter badge, tracks and shapes dashed), including shared pins' hunt logs and photos. Under Pins, "Share my location" sends your position every 30 seconds while the app is open on screen (`/api/where`, kept in memory for 12 hours).
+Set `HUNT_GROUP` in `~/.config/mi-hunt.env` on webserver02 to the partners' emails, yours included (comma-separated), add the same emails to the Cloudflare Access policy, and restart (`systemctl --user restart mi-hunt`). Each person keeps their own private data; pins, tracks, lines and areas marked "Share" are copied to `~/mi-hunt-data/group.json` on every sync and show read-only on the partners' maps (pins with a letter badge, tracks and shapes dashed), A shared pin shows its spot, name and type; its notes, good winds, hunt log and photos go along only if the owner ticks each one (the server strips the rest, and partners can only load photos that were shared). Under Pins, "Share my location" sends your position every 30 seconds while the app is open on screen (`/api/where`, kept in memory for 12 hours).
+
+## Settings and the user guide
+
+The gear in the top bar opens Settings (`settings.js`, saved per phone): text size (scales panels, buttons and labels with CSS `zoom`, not the map), night mode (a red multiply overlay), keep the screen on (Wake Lock), names on the map, and the walking pace used by Go to. The user guide is `docs/MI-Hunt-Land-Guide.pdf`, linked from Settings.
 
 ## Photos and backups
 

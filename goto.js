@@ -96,7 +96,7 @@ function renderGoto() {
   arrow.style.transform = `rotate(${turn}deg)`;
   arrow.classList.toggle("map-north", heading == null);
   arrow.classList.toggle("here", close);
-  const mins = Math.max(1, Math.round(d / WALK_MPS / 60));
+  const mins = Math.max(1, Math.round(d / (typeof walkMps === "function" ? walkMps() : WALK_MPS) / 60));
   $("goto-dist").textContent = close ? "You're there" : fmtLen(d);
   $("goto-sub").textContent = close ? `Within ${fmtLen(d)}`
     : `${bearing(lastFix, to)} · ${Math.round(brg)}° · ~${mins < 60 ? `${mins} min` : `${(mins / 60).toFixed(1)} hr`} walk` +

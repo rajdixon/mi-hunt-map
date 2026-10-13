@@ -42,7 +42,7 @@ const TOMB_DAYS = 180;
 const TYPES = {
   ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8",
   ".json": "application/json", ".geojson": "application/geo+json", ".webmanifest": "application/manifest+json",
-  ".svg": "image/svg+xml", ".png": "image/png", ".ico": "image/x-icon", ".txt": "text/plain; charset=utf-8",
+  ".svg": "image/svg+xml", ".pdf": "application/pdf", ".png": "image/png", ".ico": "image/x-icon", ".txt": "text/plain; charset=utf-8",
 };
 // Folders in the repo that are not part of the app
 const PRIVATE = new Set(["server", "scripts", ".git", ".github", "node_modules"]);
@@ -139,7 +139,14 @@ async function loadGroup() {
 }
 
 const nameOf = (email, doc) => (doc?.name || "").trim() || email.split("@")[0];
-const shared = list => (list || []).filter(x => x.shared && !x.deleted);
+// Only what the owner ticked goes to partners: notes, winds, the hunt log and
+// photos are left out unless each was chosen
+const OPTIONAL = { notes: "shareNotes", winds: "shareWinds", log: "shareLog", photos: "sharePhotos" };
+const shared = list => (list || []).filter(x => x.shared && !x.deleted).map(x => {
+  const out = { ...x };
+  for (const [field, flag] of Object.entries(OPTIONAL)) if (!x[flag]) delete out[field];
+  return out;
+});
 
 async function publish(email, doc) {
   if (!inGroup(email)) return;
