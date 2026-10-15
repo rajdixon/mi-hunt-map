@@ -162,6 +162,11 @@ const shared = list => (list || []).filter(x => x.shared && !x.deleted).map(x =>
   for (const [field, flag] of Object.entries(OPTIONAL)) if (!x[flag]) delete out[field];
   return out;
 });
+// Each shared thing goes to everyone in the group (no shareTo, including people
+// added later) or only to the partners listed in shareTo
+const sharedWithKey = (x, k) => x.shareTo == null || (Array.isArray(x.shareTo) && x.shareTo.includes(k));
+// What one partner may see of a member's shares; who else it went to stays private
+const seenBy = (list, k) => (list || []).filter(x => sharedWithKey(x, k)).map(({ shareTo, ...x }) => x);
 
 async function publish(email, doc) {
   if (!inGroup(email)) return;
@@ -174,16 +179,20 @@ async function publish(email, doc) {
 }
 
 // Tell the other members about anything newly shared
+// Tell each other member about anything they can now see that they couldn't before
 async function tellPartners(email, before, now) {
-  const had = new Set(["pins", "tracks", "shapes"].flatMap(k => before[k].map(x => x.id)));
-  const fresh = ["pins", "tracks", "shapes"].flatMap(k => now[k].filter(x => !had.has(x.id)).map(x => ({ ...x, k })));
-  if (!fresh.length) return;
   const what = x => x.k === "pins" ? "a pin" : x.k === "tracks" ? "a track" : x.kind === "area" ? "an area" : "a line";
-  const first = fresh[0], label = first.name || (first.k === "tracks" ? "a track" : "");
-  const title = fresh.length === 1 ? `${now.name} shared ${label ? `"${label}"` : what(first)}` : `${now.name} shared ${fresh.length} things`;
-  const body = fresh.slice(0, 6).map(x => x.name || what(x)).join(", ");
-  const at = first.k === "pins" ? [first.lng, first.lat] : null;
-  for (const e of GROUP) if (e !== email) await notify(e, { kind: "partner", title, body, at });
+  for (const e of GROUP) {
+    if (e === email) continue;
+    const k = keyOf(e);
+    const had = new Set(["pins", "tracks", "shapes"].flatMap(t => before[t].filter(x => sharedWithKey(x, k)).map(x => x.id)));
+    const fresh = ["pins", "tracks", "shapes"].flatMap(t => now[t].filter(x => sharedWithKey(x, k) && !had.has(x.id)).map(x => ({ ...x, k: t })));
+    if (!fresh.length) continue;
+    const first = fresh[0], label = first.name || (first.k === "tracks" ? "a track" : "");
+    const title = fresh.length === 1 ? `${now.name} shared ${label ? `"${label}"` : what(first)} with you` : `${now.name} shared ${fresh.length} things with you`;
+    const body = fresh.slice(0, 6).map(x => x.name || what(x)).join(", ");
+    await notify(e, { kind: "partner", title, body, at: first.k === "pins" ? [first.lng, first.lat] : null });
+  }
 }
 
 // The other members and what they share; null when you're not in a group
@@ -193,7 +202,7 @@ async function partnersOf(email) {
   return {
     partners: GROUP.filter(e => e !== email).map(e => {
       const k = keyOf(e), x = g[k];
-      return { key: k, name: x?.name || e.split("@")[0], joined: !!x, pins: x?.pins || [], tracks: x?.tracks || [], shapes: x?.shapes || [] };
+      return { key: k, name: x?.name || e.split("@")[0], joined: !!x, pins: seenBy(x?.pins, me), tracks: seenBy(x?.tracks, me), shapes: seenBy(x?.shapes, me) };
     }),
     me,
   };
@@ -203,7 +212,7 @@ function wherePartners(email) {
   const me = keyOf(email), cutoff = Date.now() - WHERE_HOURS * 3600e3, out = [];
   for (const [k, w] of where) {
     if (w.t < cutoff) where.delete(k);
-    else if (k !== me) out.push({ key: k, ...w });
+    else if (k !== me && (w.to == null || w.to.includes(me))) { const { to, ...rest } = w; out.push({ key: k, ...rest }); }
   }
   return out;
 }
@@ -324,7 +333,8 @@ async function photos(req, res, email, parts, owner) {
   // A partner's photo: only to view, and only on a pin they share
   if (owner && owner !== keyOf(email)) {
     const g = inGroup(email) ? await loadGroup() : {};
-    const ok = req.method === "GET" && /^[0-9a-f]{24}$/.test(owner) && g[owner]?.pins.some(p => (p.photos || []).some(x => x.id === id));
+    const ok = req.method === "GET" && /^[0-9a-f]{24}$/.test(owner)
+      && g[owner]?.pins.some(p => sharedWithKey(p, keyOf(email)) && (p.photos || []).some(x => x.id === id));
     if (!ok) return send(res, 404, { error: "Not found" });
     dir = path.join(DATA_DIR, "photos", owner);
   }
@@ -415,7 +425,9 @@ async function whereApi(req, res, email) {
     const b = await readBody(req);
     const lng = +b.lng, lat = +b.lat;
     if (!(Math.abs(lng) <= 180 && Math.abs(lat) <= 90)) return send(res, 400, { error: "Bad location" });
-    where.set(key, { name: nameOf(email, await load(email)), lng, lat, acc: Math.round(+b.acc || 0), t: Date.now() });
+    // to: null for everyone in the group, or the partner keys picked
+    const to = Array.isArray(b.to) ? b.to.filter(k => typeof k === "string" && /^[0-9a-f]{24}$/.test(k)) : null;
+    where.set(key, { name: nameOf(email, await load(email)), lng, lat, acc: Math.round(+b.acc || 0), t: Date.now(), to });
   } else if (req.method === "DELETE") {
     where.delete(key);
   } else if (req.method !== "GET") {

@@ -599,3 +599,13 @@ body.mouse .touch-only, body:not(.mouse) .mouse-only { display: none; }
   .topbar { gap: 7px; }
 }
 @media (max-width: 359px) { .brand-name { display: none; } }
+
+/* Share with everyone or picked partners (partners.js) */
+.share-who { display: grid; margin: 2px 0 6px; }
+.share-who .share-check { padding: 5px 0; }
+.share-who input[type="radio"] { width: 18px; height: 18px; accent-color: var(--blaze); flex: none; }
+.share-people { display: grid; margin-left: 28px; padding-left: 10px; border-left: 2px solid var(--line); }
+.share-people .share-check { padding: 4px 0; }
+.shared-with { color: #7fcdf0; }
+.track-share { display: grid; gap: 4px; padding: 4px 0 6px; }
+.track-share .small-btn { justify-self: start; margin-top: 4px; }

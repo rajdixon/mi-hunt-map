@@ -159,6 +159,7 @@ function renderTrackSheet() {
     const main = el("button", "area-main");
     main.append(el("span", "area-name", t.name),
       el("span", "area-meta", `${fmtTrip(t.dist)} · ${fmtDur(t.end - t.start)}`));
+    if (t.shared && typeof hasPartners === "function" && hasPartners()) main.append(el("span", "area-meta shared-with", `Shared with ${sharedWith(t)}`));
     main.addEventListener("click", () => {
       shownTracks.add(t.id); saveTracks(); drawSavedTracks();
       const xs = t.points.map(p => p[0]), ys = t.points.map(p => p[1]);
@@ -190,11 +191,25 @@ ${t.points.map(p => `    <trkpt lat="${p[1]}" lon="${p[0]}"><time>${new Date(p[2
     const actions = el("div", "track-actions");
     actions.append(show, gpx);
     if (typeof hasPartners === "function" && hasPartners()) {
-      const sh = el("button", "area-del" + (t.shared ? " on" : ""), t.shared ? "Shared ✓" : "Share");
-      sh.setAttribute("aria-pressed", String(!!t.shared));
+      const sh = el("button", "area-del" + (t.shared ? " on" : ""), t.shared ? "Shared ✓" : "Share…");
+      sh.title = t.shared ? `Shared with ${sharedWith(t)}` : "Share with partners";
+      sh.setAttribute("aria-expanded", "false");
+      // Opens the same who-to-share-with choice as pins, under the track
       sh.addEventListener("click", () => {
-        tracks = tracks.map(x => x.id === t.id ? { ...x, shared: !x.shared } : x);
-        saveTracks(); renderTrackSheet();
+        const id = `track-share-${t.id}`;
+        if ($(id)) { $(id).parentElement.remove(); sh.setAttribute("aria-expanded", "false"); return; }
+        const wrap = el("div", "track-share"), box = el("div"); box.id = id;
+        const done = el("button", "btn-primary small-btn", "Save sharing");
+        done.type = "button";
+        done.onclick = () => {
+          const v = readShareToggle(id, "track");
+          tracks = tracks.map(x => x.id === t.id ? { ...x, ...v } : x);
+          saveTracks(); renderTrackSheet();
+        };
+        wrap.append(box, done);
+        li.append(wrap);
+        renderShareToggle(id, t, "track");
+        sh.setAttribute("aria-expanded", "true");
       });
       actions.append(sh);
     }

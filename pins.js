@@ -118,6 +118,7 @@ async function renderPinList() {
     text.append(el("span", "pin-row-name", p.name || t.label), el("span", "pin-row-meta", meta));
     const sum = [camSummary(p), logSummary(p), statsSummary(p)].filter(Boolean).join(" · ");
     if (sum) text.append(el("span", "pin-row-meta", sum));
+    if (p.shared && typeof hasPartners === "function" && hasPartners()) text.append(el("span", "pin-row-meta shared-with", `Shared with ${sharedWith(p)}`));
     const scentLine = el("span", "pin-row-meta scent-warn"); scentLine.hidden = true;
     text.append(scentLine);
     if (SCENT_FROM.includes(p.type)) scentInfo(p).then(s => {

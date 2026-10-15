@@ -7,6 +7,7 @@
 let group = store.get("group", null);   // { partners: [{ key, name, joined, pins, tracks, shapes }], me }
 let myName = store.get("group:name", "");
 let whereShare = store.get("where:share", false);
+let whereTo = store.get("where:to", null);   // null: everyone; else partner keys
 let partnerWhere = [];                    // [{ key, name, lng, lat, acc, t }]
 let lastWherePost = 0, whereTimer = null;
 const partnerMarkers = [], hereMarkers = new Map();
@@ -23,39 +24,87 @@ function setGroup(g, name) {
   if (hasPartners()) pollWhere(); else stopWhere();
 }
 
-// ---------- Share toggles (pin editor, line/area editor) ----------
+// ---------- Share toggles (pin editor, line/area editor, tracks) ----------
 // Sharing an item shares its spot, name and type only. Notes, winds, the hunt
 // log and photos each go along only if ticked; the server strips the rest.
+// Each item goes to everyone in the group (shareTo: null, which includes
+// people added later) or only to the partners picked (shareTo: [keys]); the
+// server only sends partners what's theirs to see.
 const SHARE_EXTRAS = {
   pin: [["shareNotes", "Notes"], ["shareWinds", "Good winds"], ["shareLog", "Hunt log"], ["sharePhotos", "Photos"]],
   shape: [["shareNotes", "Notes"]],
+  track: [],
 };
+const checkBox = (id, text, on, cls = "share-check") => {
+  const label = el("label", cls); label.htmlFor = id;
+  const cb = el("input"); cb.type = "checkbox"; cb.id = id; cb.checked = !!on;
+  label.append(cb, el("span", null, text));
+  return [label, cb];
+};
+
+// Everyone, or only the partners ticked. read() gives null (everyone), [keys], or [] (no one picked).
+function whoPicker(id, shareTo) {
+  const box = el("div", "share-who");
+  box.setAttribute("role", "radiogroup"); box.setAttribute("aria-label", "Share with");
+  const radio = (v, text) => {
+    const label = el("label", "share-check"); const r = el("input");
+    r.type = "radio"; r.name = `${id}-who`; r.value = v; r.id = `${id}-who-${v}`; label.htmlFor = r.id;
+    label.append(r, el("span", null, text));
+    return [label, r];
+  };
+  const n = group.partners.length;
+  const [allL, all] = radio("all", n === 1 ? `Everyone (${group.partners[0].name}, and anyone added later)` : `Everyone in the group (${n} partners)`);
+  const [someL, some] = radio("some", "Only the people I pick");
+  const people = el("div", "share-people");
+  const picked = new Set(shareTo || []);
+  const boxes = group.partners.map(p => {
+    const [l, cb] = checkBox(`${id}-p-${p.key}`, p.name, shareTo ? picked.has(p.key) : false, "share-check share-person");
+    people.append(l);
+    return [p.key, cb];
+  });
+  (shareTo ? some : all).checked = true;
+  const sync = () => { people.hidden = !some.checked; };
+  all.onchange = some.onchange = sync; sync();
+  box.append(allL, someL, people);
+  return { el: box, read: () => all.checked ? null : boxes.filter(([, cb]) => cb.checked).map(([k]) => k) };
+}
+
+const pickers = new Map();
 function renderShareToggle(boxId, item, kind = "pin") {
   const box = $(boxId);
   box.replaceChildren();
   box.hidden = !hasPartners();
   if (box.hidden) return;
-  const check = (id, text, on) => {
-    const label = el("label", "share-check"); label.htmlFor = id;
-    const cb = el("input"); cb.type = "checkbox"; cb.id = id; cb.checked = !!on;
-    label.append(cb, el("span", null, text));
-    return [label, cb];
-  };
-  const [main, cb] = check(`${boxId}-cb`, `Share with ${group.partners.map(p => p.name).join(", ")}`, item?.shared);
-  const extras = el("div", "share-extras");
-  extras.append(el("span", "fine", kind === "pin" ? "They see the spot, name and type. Also share:" : "They see the line or area and its name. Also share:"));
-  for (const [k, text] of SHARE_EXTRAS[kind]) extras.append(check(`${boxId}-${k}`, text, item?.[k])[0]);
-  extras.hidden = !cb.checked;
-  cb.onchange = () => { extras.hidden = !cb.checked; };
-  box.append(main, extras);
+  const [main, cb] = checkBox(`${boxId}-cb`, "Share with partners", item?.shared);
+  const more = el("div", "share-extras");
+  const who = whoPicker(boxId, item?.shared ? item.shareTo ?? null : null);
+  pickers.set(boxId, who);
+  more.append(who.el);
+  if (SHARE_EXTRAS[kind].length) {
+    more.append(el("span", "fine", kind === "pin" ? "They see the spot, name and type. Also share:" : "They see the line or area and its name. Also share:"));
+    for (const [k, text] of SHARE_EXTRAS[kind]) more.append(checkBox(`${boxId}-${k}`, text, item?.[k])[0]);
+  }
+  more.hidden = !cb.checked;
+  cb.onchange = () => { more.hidden = !cb.checked; };
+  box.append(main, more);
 }
-// { shared, shareNotes, ... } from the toggles, or undefined when they aren't shown
+// { shared, shareTo, shareNotes, ... } from the toggles, or undefined when they aren't shown
 function readShareToggle(boxId, kind = "pin") {
   const cb = $(`${boxId}-cb`);
   if (!cb || $(boxId).hidden) return undefined;
-  const out = { shared: cb.checked };
-  for (const [k] of SHARE_EXTRAS[kind]) out[k] = cb.checked && !!$(`${boxId}-${k}`)?.checked;
+  const to = cb.checked ? pickers.get(boxId).read() : null;
+  const shared = cb.checked && !(to && !to.length);   // "only" with no one ticked: not shared
+  const out = { shared, shareTo: shared ? to : null };
+  for (const [k] of SHARE_EXTRAS[kind]) out[k] = shared && !!$(`${boxId}-${k}`)?.checked;
   return out;
+}
+
+// "Everyone" or the names, for lists and buttons
+function sharedWith(item) {
+  if (!item?.shared) return "";
+  if (item.shareTo == null) return "everyone";
+  const names = item.shareTo.map(k => partnerById(k)?.name).filter(Boolean);
+  return names.length ? names.join(", ") : "no one in the group now";
 }
 
 // ---------- Partners' things on the map ----------
@@ -201,7 +250,7 @@ function pollWhere() {
   clearTimeout(whereTimer);
   if (!hasPartners()) return;
   if (document.visibilityState === "visible") {
-    if (whereShare && lastFix) { lastWherePost = Date.now(); whereCall("POST", { lng: lastFix[0], lat: lastFix[1], acc: lastAcc }); }
+    if (whereShare && lastFix) { lastWherePost = Date.now(); whereCall("POST", { lng: lastFix[0], lat: lastFix[1], acc: lastAcc, to: whereTo }); }
     else whereCall("GET");
   }
   whereTimer = setTimeout(pollWhere, wherePeriod());
@@ -220,7 +269,7 @@ function partnersOnFix(pos) {
 
 function setWhereShare(on) {
   whereShare = on; store.set("where:share", on);
-  if (on) { if (watchId == null) $("btn-locate").click(); pollWhere(); }
+  if (on) { if (watchId == null) $("btn-locate").click(); lastWherePost = 0; pollWhere(); }
   else whereCall("DELETE");
   renderPartnersCard();
 }
@@ -236,8 +285,20 @@ function renderPartnersCard() {
   const share = el("label", "share-check");
   const cb = el("input"); cb.type = "checkbox"; cb.checked = whereShare;
   cb.onchange = () => setWhereShare(cb.checked);
-  share.append(cb, el("span", null, "Share my location with them while the app is open"));
+  share.append(cb, el("span", null, "Share my location while the app is open"));
   box.append(share);
+  if (whereShare) {
+    const who = whoPicker("where", whereTo);
+    const wrap = el("div", "share-extras");
+    wrap.append(who.el);
+    wrap.addEventListener("change", () => {
+      const to = who.read();
+      whereTo = to; store.set("where:to", to);
+      if (to && !to.length) return;   // waiting for someone to be ticked
+      lastWherePost = 0; pollWhere();
+    });
+    box.append(wrap);
+  }
 
   const ul = el("ul", "partner-list");
   for (const p of group.partners) {
@@ -275,7 +336,7 @@ function renderPartnersCard() {
   };
   nameField.append(el("span", null, "Your name, as partners see it"), input);
   box.append(nameField,
-    el("p", "fine", "Partners see the pins, tracks, lines and areas you mark \"Share\". Phones only send location while the app is open on screen."));
+    el("p", "fine", "Partners see only the pins, tracks, lines and areas you share with them, with everyone or just the people you pick. Phones only send location while the app is open on screen."));
 }
 function openPinsSheet() { if ($("sheet-pins").hidden) $("btn-pins").click(); }
 

@@ -236,6 +236,7 @@ function renderShapeList() {
     text.append(el("span", "pin-row-name", s.name || (s.kind === "area" ? "Area" : "Line")),
                 el("span", "pin-row-meta", (s.kind === "area" ? "Area · " : "Line · ") + shapeSize(s)));
     if (s.notes) text.append(el("span", "pin-row-meta", s.notes));
+    if (s.shared && typeof hasPartners === "function" && hasPartners()) text.append(el("span", "pin-row-meta shared-with", `Shared with ${sharedWith(s)}`));
     b.append(sw, text);
     b.onclick = () => {
       stopFollowing();
