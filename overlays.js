@@ -4,6 +4,7 @@
 // zoomed in far enough. DMU boundaries use the copy already in data/.
 
 const DNR = "https://services3.arcgis.com/Jdnp1TjADvSDxMAX/arcgis/rest/services";
+const STATE_FOREST = `${DNR}/Mi_State_Forest/FeatureServer`;
 const TRAILS = "https://utility.arcgis.com/usrsvcs/servers/860ad7121ae043418c66abb32bb01e96/rest/services/DNR/DNRTrailsOPENDATA/FeatureServer";
 
 // Cover types grouped into a few colors a hunter can read at a glance
@@ -63,6 +64,29 @@ function renderCoverPick() {
   box.replaceChildren(head, ul);
 }
 
+// Logging on state land: recent cuts come from the stand layer (the year the
+// trees started growing back), active sales and planned cuts from the DNR's
+// timber sale and compartment review layers.
+const YR = new Date().getFullYear();
+const CUT_AGES = [["0–2 years", "#c92a2a"], ["3–5 years", "#f76707"], ["6–10 years", "#fab005"]];
+const cutColor = ["step", ["get", "FirstOriginYear"], CUT_AGES[2][1], YR - 5, CUT_AGES[1][1], YR - 2, CUT_AGES[0][1]];
+const HARVEST = { 1: "Clearcut", 2: "Clearcut, leaving some trees", 3: "Single-tree selection", 4: "Group selection",
+  5: "Strip or patch cut", 6: "Seed tree", 7: "Seed tree, leaving some trees", 8: "Shelterwood", 9: "Crown thinning",
+  10: "Low thinning", 11: "Row thinning", 12: "Shelterwood, leaving some trees", 14: "Overstory removal", 15: "Salvage",
+  16: "Small group selection" };
+// Start dates are the first day of the DNR's fiscal year (Oct 1), stored as the night before in UTC
+const fiscalStart = t => t > 0 ? new Date(t + 86400000).toLocaleDateString([], { month: "short", year: "numeric", timeZone: "UTC" }) : null;
+const yearsAgo = y => { const n = YR - y; return n <= 0 ? `${y} (this year)` : `${y}, about ${n} year${n > 1 ? "s" : ""} ago`; };
+
+// Diagonal stripes so sale and plan areas read on top of cover colors
+function addHatch(name, color) {
+  const n = 16, c = document.createElement("canvas"); c.width = c.height = n;
+  const g = c.getContext("2d");
+  g.strokeStyle = color; g.lineWidth = 2.5; g.globalAlpha = 0.75;
+  for (const o of [-n, 0, n]) { g.beginPath(); g.moveTo(o, n); g.lineTo(o + n, 0); g.stroke(); }
+  map.addImage(name, g.getImageData(0, 0, n, n), { pixelRatio: 2 });
+}
+
 const ROAD_TYPES = { 0: "Primary forest road", 1: "Secondary forest road", 2: "Forest access route", 3: "Administrative access only", 4: "Non-DNR road" };
 const SURFACES = { 0: "Paved", 1: "Gravel", 2: "Dirt" };
 
@@ -82,6 +106,41 @@ const OVERLAYS = [
     info: p => ({ kind: "Forest stand", title: p.CoverType || "Unclassified stand",
       rows: [["Size class", p.OverallSize], ["Age", p.DominantAge && `${p.DominantAge} years`],
              ["Canopy", p.CanopyClosure && `${p.CanopyClosure}%`], ["Inventoried", p.Date]] }) },
+
+  { id: "cuts", name: "Recent cuts", heading: "Logging on state land", minzoom: 12,
+    note: "State forest cut in the last 10 years, by how long ago. Young regrowth is prime browse and cover",
+    url: `${DNR}/MiHuntStandSymbologyFRDPublic/FeatureServer/0`,
+    where: `FirstOriginYear >= ${YR - 10} AND FirstOriginYear <= ${YR}`,
+    fields: ["FirstOriginYear", "CoverType", "Acres", "DominantAge"],
+    layers: [
+      { type: "fill", paint: { "fill-color": cutColor, "fill-opacity": 0.45 } },
+      { type: "line", paint: { "line-color": cutColor, "line-width": 1.5 } }],
+    info: p => ({ kind: "Recent cut", title: p.CoverType ? `${p.CoverType} regrowth` : "Regrowing stand",
+      rows: [["Growing back since", p.FirstOriginYear && yearsAgo(p.FirstOriginYear)], ["Acres", p.Acres],
+             ["Note", "From the DNR's forest inventory: the year this stand started over, usually after a harvest."]] }) },
+
+  { id: "sales", name: "Active timber sales", minzoom: 12,
+    note: "Sold or being prepared for logging now. Expect crews and trucks",
+    url: `${DNR}/MichiganDNRAdministeredTimberSales/FeatureServer/0`,
+    fields: ["SaleName", "SaleNumber", "Acres"],
+    layers: [
+      { type: "fill", paint: { "fill-pattern": "hatch-sale" } },
+      { type: "line", paint: { "line-color": "#7a3e12", "line-width": 2 } }],
+    info: p => ({ kind: "Active timber sale", title: (p.SaleName || "").trim() || "DNR timber sale",
+      rows: [["Acres", p.Acres && Math.round(p.Acres * 10) / 10], ["Sale number", p.SaleNumber],
+             ["Note", "Approved by the DNR and either being logged or about to be. Closed sales drop off this layer."]] }) },
+
+  { id: "plans", name: "Planned cuts", minzoom: 12,
+    note: "Harvests the DNR proposes in upcoming compartment reviews",
+    url: `${STATE_FOREST}/3`, where: "TreatmentType = 1",
+    fields: ["TreatmentMethod", "ProposedStartDate", "Acres", "RxSpecs"],
+    layers: [
+      { type: "fill", paint: { "fill-pattern": "hatch-plan" } },
+      { type: "line", paint: { "line-color": "#6741d9", "line-width": 2, "line-dasharray": [2, 1.5] } }],
+    info: p => ({ kind: "Planned cut", title: HARVEST[p.TreatmentMethod] || "Timber harvest",
+      rows: [["Earliest start", fiscalStart(p.ProposedStartDate)], ["Acres", p.Acres],
+             ["Forester's plan", p.RxSpecs],
+             ["Note", "Proposed, not final. The DNR takes public comments on each compartment before approving cuts."]] }) },
 
   { id: "roads", name: "DNR roads", note: "Forest roads, two-tracks, ORV status", minzoom: 11,
     url: `${DNR}/DNR_ROADS/FeatureServer/0`, where: "RoadType < 5",
@@ -165,6 +224,8 @@ const inflight = {};
 function overlayLayerIds(o) { return o.layers.map((_, i) => `ov-${o.id}-${i}`); }
 
 document.addEventListener("land-ready", () => {
+  addHatch("hatch-sale", "#7a3e12");
+  addHatch("hatch-plan", "#6741d9");
   for (const o of OVERLAYS) {
     map.addSource(`ov-${o.id}`, { type: "geojson", data: empty(), tolerance: 0.4 });
     o.layers.forEach((l, i) => map.addLayer({
@@ -197,7 +258,17 @@ function buildOverlayList() {
         for (const id of overlayLayerIds(x)) map.setLayoutProperty(id, "visibility", cb.checked ? "visible" : "none");
       refreshOverlays();
       if (o.id === "stands") $("cover-pick").hidden = !cb.checked;
+      if (o.id === "cuts") $("cut-key").hidden = !cb.checked;
     });
+    if (o.id === "cuts") {
+      const key = el("div", "cover-pick cut-key"); key.id = "cut-key"; key.hidden = !cb.checked;
+      for (const [n, c] of CUT_AGES) {
+        const sw = el("span", "cover-swatch"); sw.style.background = c;
+        const row = el("span", "cut-age"); row.append(sw, el("span", null, n)); key.append(row);
+      }
+      li.append(key);
+    }
+    if (o.heading) ul.append(el("li", "overlay-head", o.heading));
     if (o.id === "stands") {
       const pick = el("div", "cover-pick"); pick.id = "cover-pick"; pick.hidden = !cb.checked;
       li.append(pick);

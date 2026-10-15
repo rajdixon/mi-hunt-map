@@ -25,6 +25,7 @@ PORT = 8096
 BASE = f"http://127.0.0.1:{PORT}/"
 ME, DAVE, JEN = "mike@demo.test", "dave@demo.test", "jen@demo.test"
 HERE = (-84.9555, 44.6755)          # a State Forest spot in Kalkaska County
+LOGGING = (-84.6575, 44.8375)                   # recent cuts, a timber sale and planned cuts close together
 PHONE = {"viewport": {"width": 330, "height": 714}, "device_scale_factor": 2, "is_mobile": True, "has_touch": True}
 DESKTOP = {"viewport": {"width": 1280, "height": 800}, "device_scale_factor": 1.5}
 key = lambda e: hashlib.sha256(e.encode()).hexdigest()[:24]
@@ -165,6 +166,19 @@ def _(b):
     pg.wait_for_timeout(5000)   # stands load from the DNR
     pg.evaluate("document.getElementById('ov-stands').closest('li').scrollIntoView({ block: 'start' })")
     save(pg, "cover")
+    ctx.close()
+
+
+@shot("logging")
+def _(b):
+    ctx, pg = open_app(b, locate=False)
+    pg.evaluate(f"map.jumpTo({{ center: {json.dumps(LOGGING)}, zoom: 14 }})")
+    pg.click("#btn-layers")
+    for g in ("cuts", "sales", "plans"):
+        pg.check(f"#ov-{g}")
+    pg.evaluate("closeSheet('sheet-layers')")
+    pg.wait_for_timeout(7000)   # the overlays load from the DNR
+    save(pg, "logging")
     ctx.close()
 
 

@@ -623,3 +623,8 @@ body.mouse .touch-only, body:not(.mouse) .mouse-only { display: none; }
 .cover-swatch { flex: none; width: 18px; height: 14px; border-radius: 3px; border: 1px solid rgba(255, 255, 255, .25); }
 .cover-list .cover-btn { flex: none; padding: 3px 9px; }
 .layer-list .cover-list label { border-bottom: 0; }
+
+/* Logging overlays (overlays.js) */
+.overlay-list .overlay-head { padding: 12px 0 2px; font-size: 12.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-dim); border: 0; }
+.cut-key { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; }
+.cut-age { display: inline-flex; align-items: center; gap: 6px; }
