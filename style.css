@@ -575,3 +575,27 @@ body.mouse .touch-only, body:not(.mouse) .mouse-only { display: none; }
 .use-strip span { height: 10px; border-radius: 2px; background: var(--line); }
 .use-strip span.on { background: var(--ok); }
 .use-rows { margin-top: 10px; font-size: 14px; }
+
+/* Notifications (notes.js) */
+.top-btn { position: relative; }
+.notes-badge { position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
+  background: var(--blaze); color: #fff; font: 700 11px/18px var(--body); text-align: center; border: 2px solid var(--panel); box-sizing: content-box; }
+.note-list { list-style: none; margin: 12px 0 0; padding: 0; }
+.note-list li + li { border-top: 1px solid var(--line); }
+.note-row { width: 100%; display: flex; gap: 12px; align-items: flex-start; padding: 11px 4px; background: none; border: 0; text-align: left; color: var(--ink); border-radius: 8px; }
+.note-row:disabled { cursor: default; opacity: 1; }
+.note-row.unread { background: rgba(255, 106, 19, .08); }
+.note-row.unread .note-title::after { content: ""; display: inline-block; width: 8px; height: 8px; margin-left: 8px; border-radius: 50%; background: var(--blaze); vertical-align: middle; }
+.note-ico { flex: none; width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: var(--panel-2); font-size: 16px; }
+.note-text { min-width: 0; display: grid; gap: 2px; }
+.note-title { font-weight: 600; }
+.note-body { font-size: 14px; color: var(--ink-dim); white-space: pre-line; }
+.note-time { font-size: 12px; color: var(--ink-dim); }
+#btn-notes-clear { margin-top: 8px; }
+/* Narrow phones: five buttons and the name have to fit on one line */
+@media (max-width: 419px) {
+  .top-btn { width: 36px; height: 36px; }
+  .top-btn svg { width: 18px; height: 18px; }
+  .topbar { gap: 7px; }
+}
+@media (max-width: 359px) { .brand-name { display: none; } }

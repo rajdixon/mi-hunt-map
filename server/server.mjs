@@ -27,6 +27,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
 import { fileURLToPath } from "node:url";
+import { initNotify, notify, notesApi, unreadCount, onEvening } from "./notify.mjs";
 
 const PORT = +(process.env.PORT || 8095);
 const APP_DIR = path.resolve(process.env.APP_DIR || path.join(path.dirname(fileURLToPath(import.meta.url)), ".."));
@@ -93,6 +94,17 @@ const photoDir = email => path.join(DATA_DIR, "photos", keyOf(email));
 const PHOTO_ID = /^[a-z0-9]{6,32}$/;
 const PHOTO_SIZES = ["full", "thumb"];
 
+// Everyone who has synced: [{ email, doc }]
+async function allDocs() {
+  let names = [];
+  try { names = (await fs.readdir(DATA_DIR)).filter(n => /^[0-9a-f]{24}\.json$/.test(n)); } catch {}
+  const out = [];
+  for (const n of names) {
+    try { const doc = JSON.parse(await fs.readFile(path.join(DATA_DIR, n), "utf8")); if (doc.email) out.push({ email: doc.email, doc }); } catch {}
+  }
+  return out;
+}
+
 async function load(email) {
   try { return { shapes: [], ...JSON.parse(await fs.readFile(fileOf(email), "utf8")) }; }
   catch { return { email, pins: [], tracks: [], shapes: [] }; }
@@ -153,11 +165,25 @@ const shared = list => (list || []).filter(x => x.shared && !x.deleted).map(x =>
 
 async function publish(email, doc) {
   if (!inGroup(email)) return;
-  const g = await loadGroup();
+  const g = await loadGroup(), before = g[keyOf(email)];
   g[keyOf(email)] = { name: nameOf(email, doc), pins: shared(doc.pins), tracks: shared(doc.tracks), shapes: shared(doc.shapes) };
+  if (before) tellPartners(email, before, g[keyOf(email)]).catch(e => console.error("notify", e));
   const tmp = `${groupFile()}.${process.pid}.tmp`;
   await fs.writeFile(tmp, JSON.stringify(g), { mode: 0o600 });
   await fs.rename(tmp, groupFile());
+}
+
+// Tell the other members about anything newly shared
+async function tellPartners(email, before, now) {
+  const had = new Set(["pins", "tracks", "shapes"].flatMap(k => before[k].map(x => x.id)));
+  const fresh = ["pins", "tracks", "shapes"].flatMap(k => now[k].filter(x => !had.has(x.id)).map(x => ({ ...x, k })));
+  if (!fresh.length) return;
+  const what = x => x.k === "pins" ? "a pin" : x.k === "tracks" ? "a track" : x.kind === "area" ? "an area" : "a line";
+  const first = fresh[0], label = first.name || (first.k === "tracks" ? "a track" : "");
+  const title = fresh.length === 1 ? `${now.name} shared ${label ? `"${label}"` : what(first)}` : `${now.name} shared ${fresh.length} things`;
+  const body = fresh.slice(0, 6).map(x => x.name || what(x)).join(", ");
+  const at = first.k === "pins" ? [first.lng, first.lat] : null;
+  for (const e of GROUP) if (e !== email) await notify(e, { kind: "partner", title, body, at });
 }
 
 // The other members and what they share; null when you're not in a group
@@ -215,6 +241,8 @@ function deviceOf(ua = "", app) {
 const FEATURE = /^[a-z][a-z0-9-]{0,23}$/;
 async function ping(req, email, body) {
   const u = await loadUsage(), now = Date.now();
+  if (!u[email] && OWNER && email !== OWNER)
+    notify(OWNER, { kind: "people", title: `${email} opened MI Hunt Land`, body: "Their first time. See Settings, Usage stats." }).catch(e => console.error("notify", e));
   const me = u[email] ||= { first: now, days: {}, devices: {} };
   me.last = now;
   if (typeof body.v === "string") me.version = body.v.slice(0, 24);
@@ -235,12 +263,7 @@ async function ping(req, email, body) {
 // Everyone's usage, for the owner: one row per person who has used the app
 async function usageStats() {
   const u = await loadUsage(), now = Date.now();
-  let names = [];
-  try { names = (await fs.readdir(DATA_DIR)).filter(n => /^[0-9a-f]{24}\.json$/.test(n)); } catch {}
-  const docs = new Map();
-  for (const n of names) {
-    try { const d = JSON.parse(await fs.readFile(path.join(DATA_DIR, n), "utf8")); if (d.email) docs.set(d.email, d); } catch {}
-  }
+  const docs = new Map((await allDocs()).map(x => [x.email, x.doc]));
   const today = dayOf(now), last = n => Array.from({ length: n }, (_, i) => dayOf(now - i * 86400e3));
   const d7 = last(7), d30 = last(30);
   const live = list => (list || []).filter(x => !x.deleted);
@@ -346,12 +369,14 @@ async function pruneOrphans(email, doc) {
 }
 
 const reply = async (email, doc) =>
-  ({ email, name: nameOf(email, doc), owner: !!OWNER && email === OWNER, pins: doc.pins, tracks: doc.tracks, shapes: doc.shapes, group: await partnersOf(email) });
+  ({ email, name: nameOf(email, doc), owner: !!OWNER && email === OWNER, unread: await unreadCount(email), pins: doc.pins, tracks: doc.tracks, shapes: doc.shapes, group: await partnersOf(email) });
 
 async function api(req, res, email, url) {
   const { pathname } = url;
   if (pathname.startsWith("/api/photos/")) return photos(req, res, email, pathname.slice(12).split("/"), url.searchParams.get("o"));
   if (pathname === "/api/where") return whereApi(req, res, email);
+  if (pathname === "/api/notes" || pathname.startsWith("/api/notes/"))
+    return notesApi(req, res, email, pathname.slice(11), () => readBody(req), send, !!OWNER && email === OWNER);
   if (pathname === "/api/ping" && req.method === "POST") { await ping(req, email, await readBody(req)); return send(res, 200, { ok: true }); }
   if (pathname === "/api/usage") {
     if (!OWNER || email !== OWNER || req.method !== "GET") return send(res, 404, { error: "Not found" });
@@ -433,5 +458,8 @@ const server = http.createServer(async (req, res) => {
     if (!e.status) console.error(e);
   }
 });
+
+initNotify({ DATA_DIR, OWNER, keyOf });
+onEvening(allDocs);
 
 server.listen(PORT, "127.0.0.1", () => console.log(`MI Hunt Land on 127.0.0.1:${PORT}, app ${APP_DIR}, data ${DATA_DIR}`));

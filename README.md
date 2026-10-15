@@ -100,6 +100,10 @@ Set `HUNT_GROUP` in `~/.config/mi-hunt.env` on webserver02 to the partners' emai
 
 The app pings `/api/ping` when it opens and every 5 minutes while on screen, with the version, whether it's the home-screen app, minutes on screen and counts of features used (taps on known buttons, `usage.js`). The server keeps 120 days of daily totals per person in `usage.json` in the data folder. The owner (`OWNER_EMAIL` in `~/.config/mi-hunt.env`) gets a Usage stats button in Settings, backed by `/api/usage`; for everyone else neither exists. No locations or saved content are sent; the saved counts come from what each person has already synced.
 
+## Notifications
+
+The bell in the top bar (`notes.js`) shows an unread count and opens the list. The server (`server/notify.mjs`) writes notes when a partner shares something new, when someone signs in for the first time (owner only), and after 7 PM Eastern for tomorrow's good-wind stretches at each stand (NWS hourly forecast, legal light taken as 30 minutes either side of sunrise and sunset) and for a cold front (tomorrow's high 8°F or more below today's, from Open-Meteo). Each person picks which kinds they want. Phone alerts use Web Push with a VAPID key the server makes on first start (`vapid.json` in the data folder); encryption is done with `node:crypto`, so there are still no dependencies. On iPhone, alerts only work in the Home Screen app (iOS 16.4+). Inboxes are in `inbox/` in the data folder and keep 60 days.
+
 ## Desktop
 
 At 700px and wider, sheets open as a full-height panel on the left and the map, hours chip, bars and scale move over beside it. With a mouse: zoom buttons, cursor coordinates, right-click to drop a pin, Escape closes the panel, and `/` or Ctrl/Cmd+K opens search.

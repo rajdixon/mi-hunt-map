@@ -90,6 +90,7 @@ function applyServer(doc) {
     return [...m.values()].filter(x => !x.deleted && !tombs[k][x.id]);
   };
   if ("group" in doc && typeof setGroup === "function") setGroup(doc.group, doc.name);
+  if ("unread" in doc && typeof setUnread === "function") setUnread(doc.unread);
   if ("owner" in doc && !!doc.owner !== store.get("owner", false)) {
     store.set("owner", !!doc.owner);
     if (!$("sheet-settings").hidden) renderSettings();

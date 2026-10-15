@@ -3,7 +3,7 @@
 // Land data: cache-first; a data refresh bumps VERSION to replace it.
 // Basemap tiles: areas saved from the Offline maps sheet (never trimmed),
 // plus tiles cached as you browse (up to MAX_TILES).
-const VERSION = "v25-2026-10-15";
+const VERSION = "v26-2026-10-15";
 const SHELL = `shell-${VERSION}`;
 const TILES = "tiles-v1";
 const PHOTOS = "photos-v1";
@@ -18,7 +18,7 @@ function tileKey(url) {
 }
 
 const SHELL_FILES = [
-  "./", "index.html", "style.css", "app.js", "rules.js", "weather.js", "outlook.js", "vendor/suncalc.js", "pins.js", "tracks.js", "overlays.js", "search.js", "scent.js", "stats.js", "measure.js", "radar.js", "goto.js", "draw.js", "settings.js", "sync.js", "usage.js", "photos.js", "partners.js", "manifest.webmanifest", "icon.svg", "icon-192.png",
+  "./", "index.html", "style.css", "app.js", "rules.js", "weather.js", "outlook.js", "vendor/suncalc.js", "pins.js", "tracks.js", "overlays.js", "search.js", "scent.js", "stats.js", "measure.js", "radar.js", "goto.js", "draw.js", "settings.js", "sync.js", "usage.js", "notes.js", "photos.js", "partners.js", "manifest.webmanifest", "icon.svg", "icon-192.png",
   "data/meta.json", "data/state_forest.geojson", "data/state_wildlife.geojson", "data/state_parks.geojson",
   "data/hap.geojson", "data/commercial_forest.geojson", "data/national_forest.geojson",
   "data/counties.geojson", "data/landlocked.geojson", "data/dmu.geojson", "data/deer_rules_2026.json",
@@ -38,6 +38,27 @@ self.addEventListener("activate", e => {
   e.waitUntil(caches.keys()
     .then(keys => Promise.all(keys.filter(k => k.startsWith("shell-") && k !== SHELL).map(k => caches.delete(k))))
     .then(() => self.clients.claim()));
+});
+
+// Alerts from the server (notes.js turns them on)
+self.addEventListener("push", e => {
+  let m = {};
+  try { m = e.data.json(); } catch { m = { title: "MI Hunt Land", body: e.data?.text() || "" }; }
+  e.waitUntil(Promise.all([
+    self.registration.showNotification(m.title || "MI Hunt Land", {
+      body: m.body || "", tag: m.tag, icon: "icon-192.png", badge: "icon-192.png", data: { url: m.url || "/" },
+    }),
+    m.unread && self.navigator.setAppBadge ? self.navigator.setAppBadge(m.unread).catch(() => {}) : null,
+  ]));
+});
+self.addEventListener("notificationclick", e => {
+  e.notification.close();
+  const url = new URL(e.notification.data?.url || "/", self.location.origin).href;
+  e.waitUntil(self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(list => {
+    const open = list.find(c => new URL(c.url).origin === self.location.origin);
+    if (open) { open.postMessage({ note: new URL(url).searchParams.get("note") }); return open.focus(); }
+    return self.clients.openWindow(url);
+  }));
 });
 
 self.addEventListener("fetch", e => {
