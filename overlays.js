@@ -20,6 +20,48 @@ const STAND_GROUPS = [
   ["Water", "#4a8fd9", ["Water", "Water(OI)"]],
 ];
 const standColor = ["match", ["get", "CoverType"], ...STAND_GROUPS.flatMap(([, c, types]) => [types, c]), "#9a9a9a"];
+const COVER_OTHER = ["Other & unclassified", "#9a9a9a"];
+
+// Which cover groups to show (Layers, under the stand overlay): null for all,
+// else group names. "Only oak" shows just the oak stands.
+let coverOn = store.get("cover", null);
+const coverShown = name => !coverOn || coverOn.includes(name);
+function coverFilter() {
+  if (!coverOn) return null;
+  const cover = ["coalesce", ["get", "CoverType"], ""];
+  const picked = STAND_GROUPS.filter(([n]) => coverShown(n)).flatMap(([, , t]) => t);
+  const known = STAND_GROUPS.flatMap(([, , t]) => t);
+  return ["any", ["in", cover, ["literal", picked]], ...(coverShown(COVER_OTHER[0]) ? [["!", ["in", cover, ["literal", known]]]] : [])];
+}
+function setCover(list) {
+  const all = [...STAND_GROUPS.map(([n]) => n), COVER_OTHER[0]];
+  coverOn = list && all.every(n => list.includes(n)) ? null : list;
+  store.set("cover", coverOn);
+  const stands = OVERLAYS.find(o => o.id === "stands");
+  for (const id of overlayLayerIds(stands)) if (map.getLayer(id)) map.setFilter(id, coverFilter());
+  renderCoverPick();
+}
+function renderCoverPick() {
+  const box = $("cover-pick");
+  if (!box) return;
+  const rows = [...STAND_GROUPS.map(([n, c]) => [n, c]), COVER_OTHER];
+  const all = rows.map(([n]) => n);
+  const head = el("div", "cover-head");
+  head.append(el("span", null, coverOn ? `Showing ${coverOn.length} of ${rows.length}` : "Showing all cover types"));
+  const btn = (text, fn) => { const b = el("button", "cover-btn", text); b.type = "button"; b.onclick = fn; return b; };
+  head.append(btn("All", () => setCover(null)), btn("None", () => setCover([])));
+  const ul = el("ul", "cover-list");
+  for (const [n, c] of rows) {
+    const li = el("li"), label = el("label");
+    const cb = el("input"); cb.type = "checkbox"; cb.checked = coverShown(n);
+    cb.onchange = () => setCover(cb.checked ? [...(coverOn || all), n] : all.filter(x => coverShown(x) && x !== n));
+    const sw = el("span", "cover-swatch"); sw.style.background = c;
+    label.append(cb, sw, el("span", null, n));
+    li.append(label, btn("Only", () => setCover([n])));
+    ul.append(li);
+  }
+  box.replaceChildren(head, ul);
+}
 
 const ROAD_TYPES = { 0: "Primary forest road", 1: "Secondary forest road", 2: "Forest access route", 3: "Administrative access only", 4: "Non-DNR road" };
 const SURFACES = { 0: "Paved", 1: "Gravel", 2: "Dirt" };
@@ -31,7 +73,7 @@ function plss(geo) {
 }
 
 const OVERLAYS = [
-  { id: "stands", name: "Forest stand cover type", note: "State forest stands: aspen, oak, pine…", minzoom: 13,
+  { id: "stands", name: "Forest stand cover type", note: "State forest stands: aspen, oak, pine… Pick which to show", minzoom: 13,
     url: `${DNR}/MiHuntStandSymbologyFRDPublic/FeatureServer/0`,
     fields: ["CoverType", "OverallSize", "DominantAge", "CanopyClosure", "Date"],
     layers: [
@@ -130,6 +172,7 @@ document.addEventListener("land-ready", () => {
       layout: { visibility: overlayOn[groupOf(o)] ? "visible" : "none", ...(l.type === "line" ? { "line-cap": "round" } : {}) },
     }, "areas-line"));
   }
+  setCover(coverOn);
   buildOverlayList();
   refreshOverlays();
 });
@@ -153,9 +196,15 @@ function buildOverlayList() {
       for (const x of OVERLAYS.filter(x => groupOf(x) === g))
         for (const id of overlayLayerIds(x)) map.setLayoutProperty(id, "visibility", cb.checked ? "visible" : "none");
       refreshOverlays();
+      if (o.id === "stands") $("cover-pick").hidden = !cb.checked;
     });
+    if (o.id === "stands") {
+      const pick = el("div", "cover-pick"); pick.id = "cover-pick"; pick.hidden = !cb.checked;
+      li.append(pick);
+    }
     ul.append(li);
   }
+  renderCoverPick();
   updateZoomHints();
 }
 

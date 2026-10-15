@@ -609,3 +609,17 @@ body.mouse .touch-only, body:not(.mouse) .mouse-only { display: none; }
 .shared-with { color: #7fcdf0; }
 .track-share { display: grid; gap: 4px; padding: 4px 0 6px; }
 .track-share .small-btn { justify-self: start; margin-top: 4px; }
+
+/* Forest stand cover types to show (overlays.js) */
+.cover-pick { margin: 0 0 8px 32px; padding: 8px 10px; border-radius: 10px; background: var(--panel-2); border: 1px solid var(--line); }
+.cover-head { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-dim); }
+.cover-head span { flex: 1; }
+.cover-btn { padding: 4px 10px; border-radius: 7px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); font-size: 12.5px; font-weight: 600; }
+.cover-list { list-style: none; margin: 6px 0 0; padding: 0; }
+.cover-list li { display: flex; align-items: center; gap: 8px; }
+.cover-list li + li { border-top: 1px solid var(--line); }
+.cover-list label { flex: 1; display: flex; align-items: center; gap: 10px; padding: 7px 0; border: 0; font-size: 14px; cursor: pointer; }
+.cover-list input { width: 18px; height: 18px; accent-color: var(--blaze); flex: none; }
+.cover-swatch { flex: none; width: 18px; height: 14px; border-radius: 3px; border: 1px solid rgba(255, 255, 255, .25); }
+.cover-list .cover-btn { flex: none; padding: 3px 9px; }
+.layer-list .cover-list label { border-bottom: 0; }

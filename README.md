@@ -112,6 +112,10 @@ The bell in the top bar (`notes.js`) shows an unread count and opens the list. T
 
 At 700px and wider, sheets open as a full-height panel on the left and the map, hours chip, bars and scale move over beside it. With a mouse: zoom buttons, cursor coordinates, right-click to drop a pin, Escape closes the panel, and `/` or Ctrl/Cmd+K opens search.
 
+## The user guide
+
+`docs/MI-Hunt-Land-Guide.pdf` is built from `docs/guide/guide.html` by `scripts/build_guide.py` (headless Chromium; it fails if a page overflows). Screenshots in `docs/guide/img` come from `scripts/guide_shots.py`, which runs the server locally with demo users and data. Update the guide with every user-visible change (see CLAUDE.md).
+
 ## Settings and the user guide
 
 The gear in the top bar opens Settings (`settings.js`, saved per phone): text size (scales panels, buttons and labels with CSS `zoom`, not the map), distance units (yards/miles, feet/miles or metres/km, with acres or hectares), night mode (a red multiply overlay), keep the screen on (Wake Lock), battery saver (GPS polled once a minute and partner location every 2 minutes, except while recording or using Go to), names on the map, and the walking pace used by Go to. The user guide is `docs/MI-Hunt-Land-Guide.pdf`, linked from Settings.

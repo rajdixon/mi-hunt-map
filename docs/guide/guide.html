@@ -1,0 +1,602 @@
+<!doctype html>
+<!--
+  MI Hunt Land field guide: the source of docs/MI-Hunt-Land-Guide.pdf.
+  Edit this file, then run: python3 scripts/build_guide.py
+  Screenshots are in img/; new ones come from scripts/guide_shots.py.
+  Each <section class="page"> is one printed page. Section numbers, the
+  contents and page numbers fill in by themselves; the build fails if a page
+  overflows, so split it or trim it.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MI Hunt Land: Field Guide</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,600;1,400&family=Barlow+Condensed:wght@700&display=block">
+<style>
+  @page { size: 8.5in 11in; margin: 0; }
+  :root { --ink: #1b1f17; --dim: #5d6652; --blaze: #ff6a13; --tip: #f3f5ee; --line: #d9ddd2; --panel: #1d2419; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: #888; }
+  body { font: 14px/1.45 Barlow, sans-serif; color: var(--ink); counter-reset: page; }
+  .page { width: 8.5in; height: 11in; padding: 0.62in 0.62in 0.75in; position: relative; overflow: hidden; background: #fff;
+          break-after: page; counter-increment: page; margin: 0 auto 12px; }
+  .page:not(.cover)::after { content: "MI Hunt Land · Field guide"; position: absolute; left: 0.62in; bottom: 0.38in; font: 8px Helvetica, Arial, sans-serif; color: #444; }
+  .page:not(.cover)::before { content: counter(page); position: absolute; right: 0.62in; bottom: 0.38in; font: 8px Helvetica, Arial, sans-serif; color: #444; }
+  @media print { body { background: none; } .page { margin: 0; } }
+
+  h2 { font: 700 29px/1.1 "Barlow Condensed", sans-serif; margin: 0 0 6px; }
+  h2 .n { color: var(--blaze); margin-right: 8px; }
+  h3 { font: 700 16.5px/1 "Barlow Condensed", sans-serif; letter-spacing: .09em; text-transform: uppercase; color: var(--dim); margin: 18px 0 8px; }
+  p { margin: 0 0 9px; }
+  ul, ol { margin: 0 0 10px; padding-left: 20px; }
+  li { margin-bottom: 4px; }
+  b { font-weight: 600; }
+  .lead { color: var(--dim); }
+  .sec + .sec { margin-top: 26px; }
+  .row { display: flex; gap: 26px; align-items: flex-start; }
+  .row > .text { flex: 1; min-width: 0; }
+  .figs { flex: none; display: flex; gap: 12px; }
+  figure { margin: 0; width: 1.9in; text-align: center; }
+  figure.small { width: 1.7in; }
+  figure img { width: 100%; display: block; border: 6px solid var(--panel); border-radius: 18px; background: var(--panel); }
+  figure.wide { width: 100%; }
+  figure.wide img { border-width: 5px; border-radius: 10px; }
+  figcaption { font-size: 11.3px; color: var(--dim); margin-top: 5px; line-height: 1.3; }
+  table.kv { width: 100%; border-collapse: collapse; font-size: 13.3px; margin: 4px 0 10px; }
+  table.kv td { padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  table.kv td:first-child { font-weight: 600; width: 34%; }
+  .tip { background: var(--tip); border-left: 3px solid var(--blaze); border-radius: 0 6px 6px 0; padding: 9px 14px; font-size: 13.3px; margin: 10px 0; }
+  .tip b:first-child { color: var(--blaze); }
+  .key { display: inline-block; padding: 0 6px; border: 1px solid var(--line); border-radius: 5px; background: var(--tip); font-size: 12.5px; line-height: 18px; }
+  .mono { font-family: ui-monospace, Menlo, monospace; font-size: 12.5px; background: var(--tip); padding: 1px 5px; border-radius: 4px; }
+  .swatch { display: inline-block; width: 11px; height: 11px; border-radius: 2px; vertical-align: -1px; margin-right: 5px; }
+
+  /* Cover */
+  .cover { background: var(--panel); color: #eef0e6; display: flex; gap: 36px; align-items: center; padding: 0.8in; }
+  .cover .text { flex: 1; }
+  .cover .mark { width: 64px; height: 64px; border-radius: 14px; }
+  .cover h1 { font: 700 76px/0.92 "Barlow Condensed", sans-serif; letter-spacing: .02em; margin: 26px 0 10px; }
+  .cover .sub { color: var(--blaze); font: 700 24px/1 "Barlow Condensed", sans-serif; margin-bottom: 30px; }
+  .cover p { color: #c9cfbf; font-size: 15px; max-width: 3.4in; }
+  .cover .url { color: #fff; font-weight: 600; margin-top: 26px; }
+  .cover figure { width: 2.5in; }
+  .cover figure img { border-color: #000; }
+
+  /* Contents */
+  .toc { columns: 2; column-gap: 34px; margin-top: 18px; }
+  .toc a { display: grid; grid-template-columns: 26px 1fr auto; gap: 2px 8px; padding: 9px 0; border-bottom: 1px solid var(--line); break-inside: avoid; color: inherit; text-decoration: none; }
+  .toc .tn { color: var(--blaze); font: 700 17px/1.2 "Barlow Condensed", sans-serif; grid-row: span 2; }
+  .toc .tt { font-weight: 600; }
+  .toc .tp { color: var(--dim); font-size: 12px; grid-row: span 2; align-self: center; }
+  .toc .ts { font-size: 12px; color: var(--dim); }
+
+  /* iPhone steps */
+  .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 4px; }
+  .step { display: flex; flex-direction: column; align-items: center; }
+  .step .cap { font-size: 12.6px; line-height: 1.35; margin-top: 8px; width: 100%; }
+  .step .n { color: var(--blaze); font: 700 15px/1 "Barlow Condensed", sans-serif; margin-right: 3px; }
+  .muted { color: var(--dim); }
+  .ph { width: 96px; height: 178px; border-radius: 15px; background: var(--panel); padding: 4px; }
+  .scr { width: 100%; height: 100%; border-radius: 11px; overflow: hidden; position: relative; background: #fff; font-size: 6.4px; }
+  .ring { box-shadow: 0 0 0 2px var(--blaze); border-radius: 4px; }
+  .smap { position: absolute; inset: 0 0 34px 0; background: linear-gradient(135deg, transparent 45%, #f6c9a6 45% 60%, transparent 60%), linear-gradient(#dfe8d2, #cfdcc0); }
+  .stop { position: absolute; top: 0; left: 0; right: 0; height: 17px; background: var(--panel); }
+  .stop img { width: 9px; height: 9px; margin: 4px 0 0 6px; border-radius: 2px; }
+  .sbar { position: absolute; left: 0; right: 0; bottom: 0; height: 34px; background: #f4f4f2; border-top: 1px solid #ddd; }
+  .addr { position: absolute; left: 6px; right: 6px; top: 4px; height: 11px; border-radius: 6px; background: #e3e3e0; font-size: 5.6px; line-height: 11px; text-align: center; color: #333; }
+  .tools { position: absolute; left: 6px; right: 6px; bottom: 4px; display: flex; justify-content: space-between; align-items: center; color: #2a6df4; }
+  .tools span { width: 12px; height: 12px; display: grid; place-items: center; font-size: 8px; }
+  .dim { position: absolute; inset: 0; background: #8d958a; }
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; top: 34px; background: #f2f2f7; border-radius: 9px 9px 0 0; padding: 7px 5px; }
+  .sheet .title { display: flex; gap: 4px; align-items: center; margin-bottom: 6px; font-weight: 600; font-size: 6px; }
+  .sheet .title img, .card img, .app img { border-radius: 3px; }
+  .srow { background: #fff; padding: 0 5px; height: 14px; line-height: 14px; display: flex; justify-content: space-between; border-bottom: 1px solid #ececec; }
+  .srow.hl { font-weight: 600; position: relative; z-index: 1; box-shadow: 0 0 0 2px var(--blaze); border-radius: 3px; }
+  .dlg { position: absolute; inset: 0; background: #f2f2f7; }
+  .nav { display: flex; justify-content: space-between; align-items: center; padding: 18px 5px 8px; font-size: 6px; }
+  .nav .c { color: #2a6df4; } .nav .t { font-weight: 600; } .nav .a { color: #2a6df4; font-weight: 600; padding: 1px 3px; }
+  .card { background: #fff; margin: 0 5px; border-radius: 5px; padding: 6px; display: flex; gap: 6px; align-items: center; }
+  .card .nm { border-bottom: 1px solid #ddd; font-size: 6.6px; padding-bottom: 2px; }
+  .card .url { color: #888; font-size: 4.6px; margin-top: 3px; white-space: nowrap; }
+  .tog { background: #fff; margin: 6px 5px 0; border-radius: 5px; padding: 5px 6px; display: flex; justify-content: space-between; align-items: center; }
+  .sw { width: 15px; height: 9px; border-radius: 5px; background: #34c759; position: relative; }
+  .sw::after { content: ""; position: absolute; right: 1px; top: 1px; width: 7px; height: 7px; border-radius: 50%; background: #fff; }
+  .home { position: absolute; inset: 0; background: linear-gradient(160deg, #4d6a52, #26352a); padding: 20px 7px 0; display: grid; grid-template-columns: repeat(4, 1fr); row-gap: 8px; justify-items: center; align-content: start; }
+  .app { width: 15px; height: 15px; border-radius: 4px; background: rgba(255,255,255,.28); position: relative; }
+  .app.me { background: none; }
+  .app.me img { width: 15px; height: 15px; box-shadow: 0 0 0 2px var(--blaze); display: block; }
+  .app.me em { position: absolute; top: 17px; left: 50%; transform: translateX(-50%); white-space: nowrap; font: 600 4.6px/1 Barlow; color: #fff; font-style: normal; }
+  .dock { position: absolute; left: 6px; right: 6px; bottom: 6px; height: 22px; border-radius: 8px; background: rgba(255,255,255,.22); }
+</style>
+</head>
+<body>
+
+<section class="page cover">
+  <div class="text">
+    <img class="mark" src="../../icon-180.png" alt="">
+    <h1>MI HUNT<br>LAND</h1>
+    <div class="sub">Field guide for hunters</div>
+    <p>Michigan public hunting land on your phone or computer, with hunting hours, wind, weather, your stands and hunt log, trail cam photos, and your hunting partners. Most of it keeps working with no cell signal.</p>
+    <p class="url">hunt.tradersedges.net</p>
+  </div>
+  <figure><img src="img/start.jpg" alt=""></figure>
+</section>
+
+<section class="page">
+  <h2>Contents</h2>
+  <nav class="toc" id="toc"></nav>
+</section>
+
+<section class="page">
+  <div class="sec" data-sub="Sign in, add to your home screen, the buttons">
+    <h2>Getting started</h2>
+    <div class="row">
+      <div class="text">
+        <h3>Sign in</h3>
+        <ol>
+          <li>Open <b>hunt.tradersedges.net</b> in Safari (iPhone), Chrome (Android) or any browser on a computer.</li>
+          <li>Enter your email. A one-time code is emailed to you; type it in. You stay signed in for a while, then it asks again.</li>
+        </ol>
+        <h3>The buttons</h3>
+        <table class="kv">
+          <tr><td>Top bar</td><td>Search · Measure (ruler) · Draw (pencil) · Notifications (bell) · Settings (gear)</td></tr>
+          <tr><td>Hours box</td><td>Today's legal hours and the weather. Tap it for the full outlook. After legal light ends, it shows tomorrow.</td></tr>
+          <tr><td>Right side</td><td>My location · My pins · Tracks · Offline maps · Layers</td></tr>
+          <tr><td>Status pill</td><td>When location is on: <i>On State Forest</i>, <i>Not on mapped public land</i>, and so on.</td></tr>
+        </table>
+        <div class="tip"><b>Tip:</b> press and hold anywhere on the map to drop a pin there (right-click on a computer). Tap any land to see what it is.</div>
+      </div>
+      <figure><img src="img/start.jpg" alt=""><figcaption>Your pins, a route in, a bedding area, today's hours and the bell</figcaption></figure>
+    </div>
+    <h3>Put it on your home screen</h3>
+    <p><b>Android:</b> tap the ⋮ menu, then <b>Install app</b> or <b>Add to Home screen</b>. <b>iPhone:</b> step by step below. It then opens full screen like an app, works offline once it has loaded with a signal, and can show alerts.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="ph"><div class="scr">
+          <div class="smap"></div><div class="stop"><img src="../../icon-180.png" alt=""></div>
+          <div class="sbar"><div class="addr">hunt.tradersedges.net</div>
+            <div class="tools"><span>‹</span><span>›</span>
+              <span class="ring"><svg width="8" height="9" viewBox="0 0 16 18" fill="none" stroke="#2a6df4" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6H3v11h10V6h-2M8 1v10M4.5 4.5 8 1l3.5 3.5"/></svg></span>
+              <span><svg width="8" height="7" viewBox="0 0 16 13" fill="none" stroke="#2a6df4" stroke-width="1.6"><path d="M1 1.5c2.5-1 5-1 7 1 2-2 4.5-2 7-1v10c-2.5-1-5-1-7 1-2-2-4.5-2-7-1z"/></svg></span>
+              <span><svg width="8" height="8" viewBox="0 0 16 16" fill="none" stroke="#2a6df4" stroke-width="1.6"><rect x="1" y="4" width="11" height="11" rx="2"/><path d="M4 1h9a2 2 0 0 1 2 2v9"/></svg></span></div></div>
+        </div></div>
+        <div class="cap"><span class="n">1</span>In <b>Safari</b>, open <b>hunt.tradersedges.net</b> and tap <b>Share</b>. <span class="muted">No Share button? Tap <b>•••</b> first.</span></div>
+      </div>
+      <div class="step">
+        <div class="ph"><div class="scr"><div class="dim"></div>
+          <div class="sheet"><div class="title"><img src="../../icon-180.png" width="14" height="14" alt="">MI Hunt Land</div>
+            <div class="srow"><span>Copy</span><span>⧉</span></div><div class="srow"><span>Add Bookmark</span><span>☆</span></div>
+            <div class="srow"><span>Add to Favorites</span><span>☆</span></div><div class="srow hl"><span>Add to Home Screen</span><span>⊞</span></div>
+            <div class="srow"><span>Find on Page</span><span>⌕</span></div></div>
+        </div></div>
+        <div class="cap"><span class="n">2</span>Scroll down and tap <b>Add to Home Screen</b>. <span class="muted">Not listed? Tap <b>View More</b>.</span></div>
+      </div>
+      <div class="step">
+        <div class="ph"><div class="scr"><div class="dlg">
+          <div class="nav"><span class="c">Cancel</span><span class="t">Add to Home</span><span class="a ring">Add</span></div>
+          <div class="card"><img src="../../icon-180.png" width="22" height="22" alt=""><div style="flex:1;min-width:0;overflow:hidden"><div class="nm">MI Hunt Land</div><div class="url">hunt.tradersedges.net</div></div></div>
+          <div class="tog"><span>Open as Web App</span><span class="sw"></span></div>
+        </div></div></div>
+        <div class="cap"><span class="n">3</span>Keep the name and leave <b>Open as Web App</b> on. Tap <b>Add</b>.</div>
+      </div>
+      <div class="step">
+        <div class="ph"><div class="scr"><div class="home">
+          <div class="app"></div><div class="app"></div><div class="app"></div><div class="app"></div>
+          <div class="app"></div><div class="app"></div><div class="app"></div><div class="app"></div>
+          <div class="app"></div><div class="app me"><img src="../../icon-180.png" alt=""><em>MI Hunt Land</em></div><div class="app"></div><div class="app"></div>
+        </div><div class="dock"></div></div></div>
+        <div class="cap"><span class="n">4</span>Open it from the <b>Michigan icon</b> from now on: full screen, with no Safari bars.</div>
+      </div>
+    </div>
+    <div class="tip"><b>Have the old orange-diamond icon?</b> Press and hold it, delete it, then add the app again as above. Your pins, logs and photos are safe on the server; just sign in again with an email code.</div>
+  </div>
+</section>
+
+<section class="page">
+  <div class="sec" data-sub="Land types, backgrounds, overlays">
+    <h2>Public land and map layers</h2>
+    <p class="lead">Tap Layers (bottom right) to choose what shows.</p>
+    <div class="row">
+      <div class="text">
+        <h3>Lands open to hunting</h3>
+        <table class="kv">
+          <tr><td><span class="swatch" style="background:#2f8f46"></span>State Forest</td><td>DNR state forest land</td></tr>
+          <tr><td><span class="swatch" style="background:#1fa5a0"></span>Game areas</td><td>State game and wildlife areas</td></tr>
+          <tr><td><span class="swatch" style="background:#a77bd6"></span>State parks</td><td>Only the parts open to hunting</td></tr>
+          <tr><td><span class="swatch" style="background:#9cc65a"></span>National Forest</td><td>Huron-Manistee, Hiawatha, Ottawa</td></tr>
+          <tr><td><span class="swatch" style="background:#c07a45"></span>Commercial Forest</td><td>Private land open on foot for hunting</td></tr>
+          <tr><td><span class="swatch" style="background:#ffc21a"></span>HAP</td><td>Private land leased for public hunting; check-in rules apply</td></tr>
+        </table>
+        <p>Land boundaries are stored on your phone, so they work with no signal. Tap any parcel for its name and details.</p>
+        <h3>Backgrounds</h3>
+        <p><b>Topo</b>, <b>Satellite</b>, <b>LiDAR terrain</b> (bare-earth shading that shows ridges, benches, draws and creek beds through the trees), <b>USGS Topo</b> and <b>Imagery + Topo</b>.</p>
+        <h3>Overlays</h3>
+        <ul>
+          <li><b>Forest stand cover type</b>: aspen, oak, pine, swamp conifer and more (zoom in).</li>
+          <li><b>DNR roads</b> (with ORV status), <b>DNR trails</b> (including hunter walking trails), <b>DNR parking</b>.</li>
+          <li><b>Sections and townships</b>, <b>Deer management units</b>.</li>
+          <li><b>Private land owners</b>: owner names and acres (Kalamazoo County).</li>
+          <li><b>Possibly landlocked public land</b>, <b>Weather radar</b> and <b>Scent cones</b>, each covered later in this guide.</li>
+        </ul>
+        <p>Overlays load from the DNR as you move, so they need a signal.</p>
+      </div>
+      <figure><img src="img/layers.jpg" alt=""><figcaption>Layers: land types, backgrounds, overlays</figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<section class="page">
+  <div class="sec" data-sub="Show only the cover you want">
+    <h2>Forest cover types</h2>
+    <div class="row">
+      <div class="text">
+                <p>With <b>Forest stand cover type</b> on, a list of cover types opens under it, each with its map color: aspen &amp; birch, oak, hardwoods, pine &amp; upland conifer, swamp conifer, openings &amp; brush, marsh &amp; bog, water, and other.</p>
+        <ul>
+          <li>Untick any type to hide it.</li>
+          <li><b>Only</b> shows just that type. For example, tap <b>Only</b> next to Oak to see where the oak stands are.</li>
+          <li><b>All</b> and <b>None</b> reset the list. Your choice is remembered.</li>
+        </ul>
+        <p>Tap a stand for its cover type, size class, age and canopy.</p>
+      </div>
+      <figure><img src="img/cover.jpg" alt=""><figcaption>Only oak stands showing</figcaption></figure>
+    </div>
+  </div>
+  <div class="sec" data-sub="Public land no road reaches">
+    <h2>Possibly landlocked public land</h2>
+    <div class="row">
+      <div class="text">
+        <p>Turn it on in Layers. Red pieces are public land that <b>no public road touches</b>, not even through neighbouring State Forest, Commercial Forest or HAP land. Pieces like these often see less pressure.</p>
+        <p>Tap one for its name, acres and how you might get in.</p>
+        <div class="tip"><b>Getting in legally:</b> you may reach it by water, a DNR trail, a forest road, an easement, or with a landowner's permission to cross. Crossing private land without permission is trespassing.</div>
+      </div>
+      <figure><img src="img/landlocked.jpg" alt=""><figcaption>43 acres on Webster Lake, Berrien County</figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<section class="page">
+  <div class="sec" data-sub="Hours, weather, pressure, moon, verdict">
+    <h2>Hunting hours and the day's outlook</h2>
+    <p class="lead">The box at the top always shows legal hours for where you are (or the middle of the map) and the weather. Tap it for the full picture.</p>
+    <div class="row">
+      <div class="text">
+        <h3>The hours box</h3>
+        <ul>
+          <li>Opens – closes, how long is left, and the county.</li>
+          <li>Temperature, wind (the arrow points where it's blowing), pressure and its trend, and the sky.</li>
+          <li><b>After legal light ends</b> it switches to tomorrow: tomorrow's hours, the time until opening, and the forecast for first light.</li>
+        </ul>
+        <h3>"At a glance" (top of the panel)</h3>
+        <ul>
+          <li><b>The verdict:</b> Good day to hunt, Fair day or Slow day, with the reasons: a cold snap and a pressure change count for it; strong wind, likely rain and heat count against.</li>
+          <li><b>Right now:</b> temperature, sky, wind, pressure, rain chance.</li>
+          <li><b>Outlook:</b> high and low, cold snap flag, what the pressure does, and conditions at first light and in the last hour.</li>
+          <li><b>Your stands nearby:</b> the times each stand's wind is right, and what your log says works there.</li>
+          <li>Moon phase, and which deer seasons are open.</li>
+        </ul>
+        <h3>Below that</h3>
+        <ul>
+          <li><b>Next 7 days:</b> tap a day to plan it. <b>▼8°</b> marks a cold snap; arrows show pressure (<b>↓↑</b> is a front passing).</li>
+          <li><b>More detail:</b> the hours table, forecast wording, what the pressure means for deer, moon times, solunar periods, and the rules: seasons, antler restrictions, antlerless licenses, baiting.</li>
+        </ul>
+        <div class="tip"><b>What the research says:</b> deer move more on a temperature drop and when the pressure is changing. Solunar times are a tradition, not proven science; they're shown because hunters ask for them.</div>
+      </div>
+      <figure><img src="img/outlook.jpg" alt=""><figcaption>Tomorrow at a glance, after legal light</figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<section class="page">
+  <div class="sec" data-sub="Stands, blinds, cams, sign, good winds">
+    <h2>Pins and wind</h2>
+    <div class="row">
+      <div class="text">
+        <h3>Drop a pin</h3>
+        <ul>
+          <li>Press and hold on the map (right-click on a computer), or open <b>My pins</b> and tap <b>Pin my location</b> or <b>Pin map center</b>.</li>
+          <li>Pick a type: tree stand, ground blind, camp, trail cam, buck rub, buck scrape, parking or other.</li>
+          <li>Add a name and notes (access route, shooting lanes).</li>
+        </ul>
+        <h3>Good winds</h3>
+        <p>For stands and blinds, tick the winds the spot hunts well in (where the wind comes from). The pin then shows:</p>
+        <ul>
+          <li>Whether <b>right now</b> is a good wind, and the good-wind stretches in legal hours over the next days.</li>
+          <li>A <b>Good wind / Wrong wind</b> badge in your pin list.</li>
+          <li>Its good-wind times in the day's outlook, and in an evening notification for tomorrow.</li>
+        </ul>
+        <h3>From a pin</h3>
+        <table class="kv">
+          <tr><td>Go to</td><td>Arrow and distance on foot</td></tr>
+          <tr><td>Drive</td><td>Driving directions in Google Maps</td></tr>
+          <tr><td>Share</td><td>A link anyone can open: spot, name and type only</td></tr>
+        </table>
+        <p><b>My pins</b> lists everything by distance from you, with the wind card for your area, your lines and areas, and backup buttons.</p>
+      </div>
+      <div class="figs">
+        <figure class="small"><img src="img/pin-edit.jpg" alt=""><figcaption>A stand: type, name, notes</figcaption></figure>
+        <figure class="small"><img src="img/pins-list.jpg" alt=""><figcaption>My pins</figcaption></figure>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="page">
+  <div class="sec" data-sub="Sightings, sits, what works where">
+    <h2>Hunt log and your patterns</h2>
+    <div class="row">
+      <div class="text">
+        <p>Open a pin and tap <b>Add entry</b> after each sit:</p>
+        <ul>
+          <li><b>Sighting</b>, <b>Shot</b>, <b>Harvest</b>, <b>No deer</b> or <b>Note</b>, plus what happened.</li>
+          <li>The time and the weather (wind, temperature, pressure) fill in by themselves.</li>
+        </ul>
+        <p>After <b>3 sits</b> at a spot, <b>Your patterns</b> shows what worked: sits with deer out of sits logged, by wind, morning or evening, temperature and pressure trend. The best one is in green.</p>
+        <div class="tip"><b>Log the empty sits too.</b> Tap <b>No deer</b> when nothing shows, or every sit looks like a good one.</div>
+      </div>
+      <figure><img src="img/patterns.jpg" alt=""><figcaption>Patterns: NW wind 3 for 3</figcaption></figure>
+    </div>
+  </div>
+  <div class="sec" data-sub="Add, view, cam checks">
+    <h2>Trail cam photos</h2>
+    <ul>
+      <li>Open a pin (usually a trail cam) and tap <b>Add photos</b>. Pick from your camera roll or Files; a whole card's worth at once is fine.</li>
+      <li>Each photo shows the time the <b>camera</b> took it, not when you uploaded it.</li>
+      <li>Your phone shrinks photos before uploading, so a big trail cam picture becomes about half a megabyte.</li>
+      <li>On a trail cam pin, adding photos logs a <b>Cam check</b>; the pin list shows "Checked 3 days ago · 24 photos".</li>
+      <li>Tap a photo for full screen: add a note ("8-point, from the swamp"), step through newer and older (arrow keys on a computer), or delete.</li>
+    </ul>
+    <p>Uploading needs a signal. A photo you've opened once is kept for offline viewing.</p>
+  </div>
+</section>
+
+<section class="page">
+  <div class="sec" data-sub="Where your scent is blowing">
+    <h2>Scent cones</h2>
+    <div class="row">
+      <div class="text">
+        <p>Turn on <b>Scent cones</b> in Layers. Each tree stand and ground blind gets a wedge showing where your scent drifts for this hour's forecast wind, about 300 m downwind. In calm air it's a circle around the stand.</p>
+        <p>The cone turns red when it covers one of your trail cams, rubs or scrapes, and the pin list warns you ("Scent over Rub line now").</p>
+      </div>
+      <figure><img src="img/scent.jpg" alt=""><figcaption>Scent cone from Ridge stand</figcaption></figure>
+    </div>
+  </div>
+  <div class="sec" data-sub="Arrow and distance to any pin">
+    <h2>Go to</h2>
+    <div class="row">
+      <div class="text">
+        <p>Open any pin (yours or a partner's) and tap <b>Go to</b>. You get:</p>
+        <ul>
+          <li>A big arrow pointing the way, the distance, compass heading and walking time.</li>
+          <li>A dashed line on the map from you to it.</li>
+          <li>A buzz when you're within about 15 yards.</li>
+        </ul>
+        <p>The first time, your iPhone asks to use the compass. Allow it, or tap <b>Compass</b> later. Until it has the compass, the arrow points against map north ("arrow is map-up"); once you're walking it uses your direction of travel.</p>
+        <div class="tip"><b>Works with no signal.</b> GPS and the compass don't need cell service. Tap <b>Stop</b> when you're there.</div>
+      </div>
+      <figure><img src="img/goto.jpg" alt=""><figcaption>Going to Ridge stand</figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<section class="page">
+  <div class="sec" data-sub="Record your walk, find your way back">
+    <h2>Tracks</h2>
+    <div class="row">
+      <div class="text">
+        <p>Tap <b>Tracks</b> (right side), then <b>Start recording</b> as you walk in. The orange line follows you, the green dot is where you started, and a dotted line points straight back to it with the distance.</p>
+        <p><b>Stop and save</b> when you're done. Saved tracks can be shown or hidden on the map, saved as GPX, shared with partners, or deleted.</p>
+        <div class="tip"><b>Keep the app open on screen while recording.</b> Phones stop GPS for web apps when the screen locks or you switch apps; recording picks up again when you come back. Turn on <b>Keep the screen on</b> in Settings for long walks.</div>
+      </div>
+      <figure><img src="img/tracks.jpg" alt=""><figcaption>Recording, with the walk in from parking</figcaption></figure>
+    </div>
+  </div>
+  <div class="sec" data-sub="Property lines, routes, bedding, plots">
+    <h2>Lines and areas</h2>
+    <div class="row">
+      <div class="text">
+        <ol>
+          <li>Tap the <b>pencil</b> at the top.</li>
+          <li>Pick <b>Line</b> (property line, route in, drag line, shooting lane) or <b>Area</b> (food plot, bedding area, sanctuary, thicket).</li>
+          <li>Tap points on the map. The length or acres show as you go; <b>Undo</b> removes the last point.</li>
+          <li>Tap <b>Done</b>, then name it (or tap a suggestion), pick a color, add notes, and <b>Save</b>.</li>
+        </ol>
+        <p>Tap a line or area later to rename it, <b>Change points</b>, or delete it. They're listed under My pins.</p>
+      </div>
+      <div class="figs">
+        <figure class="small"><img src="img/draw-area.jpg" alt=""><figcaption>Drawing an area</figcaption></figure>
+        <figure class="small"><img src="img/draw-name.jpg" alt=""><figcaption>Naming it</figcaption></figure>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="page">
+  <div class="sec" data-sub="Distance, acres, 450 ft rings">
+    <h2>Measure and safety zones</h2>
+    <div class="row">
+      <div class="text">
+        <p>Tap the <b>ruler</b> at the top.</p>
+        <ul>
+          <li><b>Distance / area:</b> tap points for the distance; three or more points also give the acres inside. Tap a pin to measure to it exactly.</li>
+          <li><b>450 ft ring:</b> tap a house or farm building to draw Michigan's safety zone. No hunting inside it, gun or bow, without written permission from the owner or occupant.</li>
+        </ul>
+      </div>
+      <figure><img src="img/measure.jpg" alt=""><figcaption>352 yd, 3.12 acres</figcaption></figure>
+    </div>
+  </div>
+  <div class="sec" data-sub="Live rain and the last hour">
+    <h2>Weather radar</h2>
+    <div class="row">
+      <div class="text">
+        <p>Turn on <b>Weather radar</b> in Layers to see live rain from the National Weather Service, updated every 5 minutes. The bar at the bottom shows the time of the latest scan.</p>
+        <p>Tap <b>Play last hour</b> to loop the last 50 minutes and see which way the rain is moving. Tap × to turn radar off. Radar needs a signal.</p>
+      </div>
+      <figure><img src="img/radar.jpg" alt=""><figcaption>A storm line moving through</figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<section class="page">
+  <div class="sec" data-sub="Before you lose signal">
+    <h2>Offline maps and search</h2>
+    <div class="row">
+      <div class="text">
+        <h3>Offline maps</h3>
+        <p>Land boundaries, your pins, the hours and the moon always work offline. The <b>background map</b> needs saving first:</p>
+        <ol>
+          <li>With a signal, move the map over where you'll hunt.</li>
+          <li>Tap <b>Offline maps</b> (the down arrow), check the size, and tap <b>Save this area</b>.</li>
+        </ol>
+        <p>Save each background you want (Topo, Satellite, LiDAR) separately. Saved areas show as dashed outlines.</p>
+        <h3>Search</h3>
+        <p>Tap the magnifier and search for a game area, town, your pins, a county, a DMU, a township and section (<span class="mono">T29N R2W S23</span>) or coordinates.</p>
+      </div>
+      <div class="figs">
+        <figure class="small"><img src="img/offline.jpg" alt=""><figcaption>Save this area</figcaption></figure>
+        <figure class="small"><img src="img/search.jpg" alt=""><figcaption>Search</figcaption></figure>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="page">
+  <div class="sec" data-sub="Share with everyone or just who you pick">
+    <h2>Hunting partners</h2>
+    <p class="lead">If you're part of a hunting group, you can share the spots you choose, with the whole group or only certain people, and see each other on the map. Nothing is shared unless you tick it.</p>
+    <div class="row">
+      <div class="text">
+        <h3>Share a pin, line or area</h3>
+        <ol>
+          <li>Open it and tick <b>Share with partners</b>.</li>
+          <li>Choose who: <b>Everyone in the group</b> (including anyone who joins later), or <b>Only the people I pick</b> and tick their names.</li>
+          <li>That shares the spot, name and type. Tick anything else you want them to see: <b>Notes</b>, <b>Good winds</b>, <b>Hunt log</b>, <b>Photos</b>. Each is off until you turn it on.</li>
+        </ol>
+        <p>Tracks have a <b>Share…</b> button in the Tracks list with the same choices. Your lists show who each thing is shared with. Untick something, or untick a person, and it disappears from their map.</p>
+        <h3>What partners see</h3>
+        <ul>
+          <li>Only what you shared with them, with your initial on it. Lines, areas and tracks show dashed. They can look, and use Go to, but can't change anything.</li>
+          <li>Only the extras you ticked. They never see who else you shared something with.</li>
+          <li>They get a notification when you share something new with them.</li>
+        </ul>
+      </div>
+      <figure><img src="img/share.jpg" alt=""><figcaption>Ridge stand, shared only with Dave, with its good winds</figcaption></figure>
+    </div>
+  </div>
+  <div class="sec">
+    <div class="row">
+      <div class="text">
+        <h3>Where everyone is</h3>
+        <p>In <b>My pins</b>, under Hunting partners, tick <b>Share my location</b>, then choose everyone or only certain people. They see you as a blue dot with your initial and "seen 3 min ago", and the list shows how far away and which direction each partner is, with <b>Show</b> and <b>Go to</b>.</p>
+        <div class="tip"><b>Your phone only sends your location while the app is open on screen.</b> With the phone locked or another app in front, partners see your last spot and how long ago it was. Set the name partners see you as in the same place.</div>
+        <p>To join a group, ask the group owner to add your email.</p>
+      </div>
+      <div class="figs">
+        <figure class="small"><img src="img/partners.jpg" alt=""><figcaption>Location shared only with Dave</figcaption></figure>
+        <figure class="small"><img src="img/partner-view.jpg" alt=""><figcaption>What a partner sees: the stand and the log you shared</figcaption></figure>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="page">
+  <div class="sec" data-sub="The bell, alerts on your phone">
+    <h2>Notifications</h2>
+    <div class="row">
+      <div class="text">
+        <p>The <b>bell</b> at the top shows how many notifications you haven't seen. Tap it for the list; tap one with a place to fly the map there.</p>
+        <ul>
+          <li><b>A partner shared something</b> with you.</li>
+          <li><b>Good wind tomorrow:</b> each evening, the times tomorrow when your stands' good winds line up with legal hours.</li>
+          <li><b>Cold front:</b> each evening, when tomorrow's high is 8°F or more below today's.</li>
+        </ul>
+        <p>Under <b>Notify me when</b>, untick any kind you don't want.</p>
+        <h3>Alerts on your phone</h3>
+        <p>Tap <b>Turn on alerts</b> in the bell panel and allow notifications, once on each phone or computer. You then get an alert even when the app is closed. <b>Send a test</b> checks it works.</p>
+        <div class="tip"><b>iPhone:</b> alerts only work in the app opened from your Home Screen (see Getting started), not in Safari.</div>
+      </div>
+      <figure><img src="img/notes.jpg" alt=""><figcaption>Tomorrow's good wind, a cold front and partner shares</figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<section class="page">
+  <div class="sec" data-sub="Text size, units, night mode, battery">
+    <h2>Settings</h2>
+    <p class="lead">Tap the gear at the top right.</p>
+    <div class="row">
+      <div class="text">
+        <table class="kv">
+          <tr><td>Text size</td><td>Small, Normal, Large or Extra large. Makes buttons, panels and labels bigger; the map itself still zooms as usual.</td></tr>
+          <tr><td>Distances</td><td>Yards &amp; miles, Feet &amp; miles, or Meters &amp; km. Areas show in acres, or hectares with meters.</td></tr>
+          <tr><td>Night mode</td><td>Turns the whole screen red and dim, like a red headlamp, so you keep your night vision in a dark stand.</td></tr>
+          <tr><td>Keep the screen on</td><td>Stops the screen sleeping while the app is open. Handy with Go to and tracks; uses more battery.</td></tr>
+          <tr><td>Battery saver</td><td>Checks GPS once a minute instead of constantly, and shares your location with partners every 2 minutes. Recording a track and Go to still get full-speed GPS.</td></tr>
+          <tr><td>Names on the map</td><td>Show or hide the labels under pins, lines and areas.</td></tr>
+          <tr><td>Walking pace</td><td>Slow (1.5 mph), Normal (2 mph) or Fast (3 mph), for Go to's walking time.</td></tr>
+          <tr><td>About</td><td>This guide, and <b>Check for update</b>.</td></tr>
+        </table>
+        <p>Settings are saved on each phone or computer separately.</p>
+      </div>
+      <div class="figs">
+        <figure class="small"><img src="img/settings.jpg" alt=""><figcaption>Settings</figcaption></figure>
+        <figure class="small"><img src="img/night.jpg" alt=""><figcaption>Night mode</figcaption></figure>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="page">
+  <div class="sec" data-sub="Bigger map for planning, mouse and keys">
+    <h2>On a computer</h2>
+    <p class="lead">Open hunt.tradersedges.net in any browser and sign in the same way. Everything syncs, so plan at home and it's on your phone in the woods.</p>
+    <figure class="wide"><img src="img/desktop.jpg" alt=""><figcaption>Planning on a computer: My pins in the side panel, with partners and their shared spots on the map</figcaption></figure>
+    <h3>What's different</h3>
+    <table class="kv">
+      <tr><td>Panels</td><td>Open down the left side, and the map moves over so nothing is hidden.</td></tr>
+      <tr><td>Drop a pin</td><td>Right-click anywhere on the map.</td></tr>
+      <tr><td>Zoom</td><td>Scroll wheel or trackpad, or the + and − buttons at the top right.</td></tr>
+      <tr><td>Coordinates</td><td>The bottom corner shows the latitude and longitude under your mouse.</td></tr>
+      <tr><td>Keys</td><td><span class="key">Esc</span> closes the open panel. <span class="key">/</span> or <span class="key">Ctrl</span>+<span class="key">K</span> (<span class="key">⌘</span>+<span class="key">K</span> on a Mac) opens search. <span class="key">←</span> <span class="key">→</span> step through photos.</td></tr>
+    </table>
+  </div>
+</section>
+
+<section class="page">
+  <div class="sec" data-sub="Your data, limits, the rules">
+    <h2>Sync, backups and good to know</h2>
+    <h3>Your data</h3>
+    <ul>
+      <li>Pins, hunt logs, photos, tracks, lines and areas are saved on your phone <b>and</b> on the private server. Changes sync whenever you have a signal; the top of My pins says when it last synced.</li>
+      <li>Sign in on another phone, tablet or computer and everything is there.</li>
+      <li>The server is backed up every night. You can also save your own copy: My pins, then <b>Full backup</b>. <b>Import</b> brings a backup or GPX file back in, and <b>Pins as GPX</b> opens in onX, HuntStand, Gaia and Google Earth.</li>
+    </ul>
+    <h3>Good to know</h3>
+    <ul>
+      <li><b>GPS only runs while the app is open on screen.</b> This is true for every web app on a phone. On long sits, turn on <b>Battery saver</b> in Settings.</li>
+      <li>Weather, radar, overlays, notifications and photo uploads need a signal. Land boundaries, pins, hours, the moon, Go to and saved offline maps don't.</li>
+      <li>If the app says you're signed out, reload it and enter a new email code.</li>
+      <li>When an update comes out, the app reloads itself once. Settings, then <b>Check for update</b>, does it right away. This guide is updated with each new feature.</li>
+    </ul>
+    <div class="tip"><b>This map is a guide, not a legal boundary.</b> It doesn't show safety zones around buildings (use the 450 ft ring), posted closures, refuges inside open areas, or local ordinances. The hours and rules summarise the 2026 Michigan Deer Hunting Digest. Always check the full digest and Michigan.gov/DNRLaws before you hunt.</div>
+  </div>
+</section>
+
+<script>
+  // Number the sections and build the contents with page numbers
+  const pages = [...document.querySelectorAll(".page")];
+  const toc = document.getElementById("toc");
+  let n = 0;
+  for (const sec of document.querySelectorAll(".sec[data-sub]")) {
+    const h = sec.querySelector("h2");
+    n++;
+    h.insertAdjacentHTML("afterbegin", `<span class="n">${n}</span>`);
+    const page = pages.indexOf(sec.closest(".page")) + 1;
+    const a = document.createElement("a");
+    a.innerHTML = `<span class="tn">${n}</span><span class="tt"></span><span class="tp">${page}</span><span class="ts"></span>`;
+    a.querySelector(".tt").textContent = h.lastChild.textContent;
+    a.querySelector(".ts").textContent = sec.dataset.sub;
+    toc.append(a);
+  }
+</script>
+</body>
+</html>
