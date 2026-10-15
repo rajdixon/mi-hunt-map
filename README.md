@@ -96,6 +96,14 @@ The hunting-hours sheet (tap the hours chip) shows, for the chosen day: the NWS 
 
 Set `HUNT_GROUP` in `~/.config/mi-hunt.env` on webserver02 to the partners' emails, yours included (comma-separated), add the same emails to the Cloudflare Access policy, and restart (`systemctl --user restart mi-hunt`). Each person keeps their own private data; pins, tracks, lines and areas marked "Share" are copied to `~/mi-hunt-data/group.json` on every sync and show read-only on the partners' maps (pins with a letter badge, tracks and shapes dashed), A shared pin shows its spot, name and type; its notes, good winds, hunt log and photos go along only if the owner ticks each one (the server strips the rest, and partners can only load photos that were shared). Under Pins, "Share my location" sends your position every 30 seconds while the app is open on screen (`/api/where`, kept in memory for 12 hours).
 
+## Usage stats (owner only)
+
+The app pings `/api/ping` when it opens and every 5 minutes while on screen, with the version, whether it's the home-screen app, minutes on screen and counts of features used (taps on known buttons, `usage.js`). The server keeps 120 days of daily totals per person in `usage.json` in the data folder. The owner (`OWNER_EMAIL` in `~/.config/mi-hunt.env`) gets a Usage stats button in Settings, backed by `/api/usage`; for everyone else neither exists. No locations or saved content are sent; the saved counts come from what each person has already synced.
+
+## Desktop
+
+At 700px and wider, sheets open as a full-height panel on the left and the map, hours chip, bars and scale move over beside it. With a mouse: zoom buttons, cursor coordinates, right-click to drop a pin, Escape closes the panel, and `/` or Ctrl/Cmd+K opens search.
+
 ## Settings and the user guide
 
 The gear in the top bar opens Settings (`settings.js`, saved per phone): text size (scales panels, buttons and labels with CSS `zoom`, not the map), distance units (yards/miles, feet/miles or metres/km, with acres or hectares), night mode (a red multiply overlay), keep the screen on (Wake Lock), battery saver (GPS polled once a minute and partner location every 2 minutes, except while recording or using Go to), names on the map, and the walking pace used by Go to. The user guide is `docs/MI-Hunt-Land-Guide.pdf`, linked from Settings.

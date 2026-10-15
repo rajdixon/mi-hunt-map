@@ -80,6 +80,19 @@ const map = new maplibregl.Map({
 map.touchZoomRotate.disableRotation();
 const scaleControl = new maplibregl.ScaleControl({ unit: "imperial" });
 map.addControl(scaleControl, "bottom-left");
+// With a mouse: zoom buttons, and the cursor's coordinates (when GPS isn't showing)
+const mouse = matchMedia("(hover: hover) and (pointer: fine)").matches;
+if (mouse) {
+  map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
+  map.on("mousemove", e => {
+    if (lastFix) return;
+    const c = $("coords");
+    c.hidden = false;
+    c.textContent = `${e.lngLat.lat.toFixed(5)}, ${e.lngLat.lng.toFixed(5)}`;
+  });
+  map.getCanvas().addEventListener("mouseleave", () => { if (!lastFix) $("coords").hidden = true; });
+}
+document.body.classList.toggle("mouse", mouse);
 
 function setBasemap(name) {
   basemap = name; store.set("basemap", name);
@@ -338,10 +351,33 @@ function liftButtons() {
   const open = [...document.querySelectorAll(".sheet")].find(s => !s.hidden);
   const docked = open && innerWidth < 700;
   const h = docked ? open.offsetHeight : 0;
+  // Wider screens: the sheet is a side panel on the left
+  // (layout box, not getBoundingClientRect: the slide-in animation would skew it; zoom scales both)
+  const z = +getComputedStyle(document.documentElement).getPropertyValue("--ui-zoom") || 1;
+  const w = open && !docked ? Math.round((open.offsetLeft + open.offsetWidth) * z) : 0;
   document.documentElement.style.setProperty("--sheet-h", h + "px");
-  // Keep the map's center in the visible area above the sheet (the rules panel reads it)
-  if (map.getPadding().bottom !== h) map.setPadding({ top: 0, left: 0, right: 0, bottom: h });
+  document.documentElement.style.setProperty("--sheet-w", w + "px");
+  // Keep the map's center in the visible area beside or above the sheet (the rules panel reads it)
+  const p = map.getPadding();
+  if (p.bottom !== h || p.left !== w) map.setPadding({ top: 0, left: w, right: 0, bottom: h });
 }
+addEventListener("resize", liftButtons);
+
+// Keyboard: Escape closes the open panel; / or Ctrl+K opens search
+document.addEventListener("keydown", e => {
+  if (e.defaultPrevented || !$("photo-viewer").hidden) return;
+  const typing = e.target.closest?.("input, textarea, select, [contenteditable]");
+  if (e.key === "Escape") {
+    const open = [...document.querySelectorAll(".sheet")].find(s => !s.hidden);
+    if (open) { e.preventDefault(); closeSheet(open.id); if (typing) e.target.blur(); }
+    return;
+  }
+  if ((e.key === "/" && !typing && !e.metaKey && !e.ctrlKey) || (e.key.toLowerCase() === "k" && (e.metaKey || e.ctrlKey))) {
+    e.preventDefault();
+    if ($("sheet-search").hidden) $("btn-search").click();
+    setTimeout(() => $("search-input").focus(), 50);
+  }
+});
 function openSheet(id) {
   for (const s of document.querySelectorAll(".sheet")) s.hidden = s.id !== id;
   liftButtons();

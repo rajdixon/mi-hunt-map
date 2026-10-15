@@ -17,6 +17,7 @@
 //   HUNT_GROUP      comma-separated emails of hunting partners (you included) who
 //                   see each other's shared pins, tracks and drawings, and live
 //                   locations. Each still needs a login in the Access policy.
+//   OWNER_EMAIL     the app's owner, who can see everyone's usage (Settings, Usage)
 //   DEV_USER        local testing only: skip Access and act as this email
 //   CF_CERTS_URL    testing only: where to fetch Access signing keys
 
@@ -34,10 +35,12 @@ const { CF_TEAM, CF_AUD, DEV_USER } = process.env;
 const emails = v => (v || "").split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
 const ALLOWED = emails(process.env.ALLOWED_EMAILS);
 const GROUP = emails(process.env.HUNT_GROUP);
+const OWNER = emails(process.env.OWNER_EMAIL)[0] || "";
 const WHERE_HOURS = 12;   // partner locations older than this are dropped
 const MAX_BODY = 20 * 1024 * 1024;
 const ORPHAN_DAYS = 7;   // photos no pin refers to are removed after this long
 const TOMB_DAYS = 180;
+const USAGE_DAYS = 120;   // daily usage kept this long
 
 const TYPES = {
   ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8",
@@ -179,6 +182,95 @@ function wherePartners(email) {
   return out;
 }
 
+// ---------- Usage ----------
+// usage.json: { [email]: { first, last, devices: { label: t }, version, days: { "YYYY-MM-DD": { opens, mins, feats } } } }
+// The app pings when it opens and every 5 minutes while it's on screen;
+// it also counts which features were used since the last ping.
+const usageFile = () => path.join(DATA_DIR, "usage.json");
+let usage = null, usageDirty = false;
+async function loadUsage() {
+  if (!usage) { try { usage = JSON.parse(await fs.readFile(usageFile(), "utf8")); } catch { usage = {}; } }
+  return usage;
+}
+async function flushUsage() {
+  if (!usageDirty) return;
+  usageDirty = false;
+  await fs.mkdir(DATA_DIR, { recursive: true, mode: 0o700 });
+  const tmp = `${usageFile()}.${process.pid}.tmp`;
+  await fs.writeFile(tmp, JSON.stringify(usage), { mode: 0o600 });
+  await fs.rename(tmp, usageFile());
+}
+setInterval(() => flushUsage().catch(e => console.error("usage", e)), 60e3).unref();
+for (const sig of ["SIGTERM", "SIGINT"]) process.on(sig, () => flushUsage().catch(() => {}).finally(() => process.exit(0)));
+
+// Days in the owner's time zone (the server runs on UTC)
+const dayOf = (t = Date.now()) => new Date(t).toLocaleDateString("en-CA", { timeZone: "America/Detroit" });
+
+function deviceOf(ua = "", app) {
+  const os = /iPad/.test(ua) ? "iPad" : /iPhone|iPod/.test(ua) ? "iPhone" : /Android/.test(ua) ? "Android"
+    : /Macintosh|Mac OS X/.test(ua) ? "Mac" : /Windows/.test(ua) ? "Windows" : /CrOS/.test(ua) ? "Chromebook" : /Linux/.test(ua) ? "Linux" : "Other";
+  return `${os} ${app ? "app" : "browser"}`;
+}
+
+const FEATURE = /^[a-z][a-z0-9-]{0,23}$/;
+async function ping(req, email, body) {
+  const u = await loadUsage(), now = Date.now();
+  const me = u[email] ||= { first: now, days: {}, devices: {} };
+  me.last = now;
+  if (typeof body.v === "string") me.version = body.v.slice(0, 24);
+  me.devices[deviceOf(req.headers["user-agent"], !!body.app)] = now;
+  const d = me.days[dayOf(now)] ||= { opens: 0, mins: 0, feats: {} };
+  if (body.open) d.opens++;
+  // Minutes on screen since the last ping, capped so a stuck tab can't inflate it
+  d.mins += Math.max(0, Math.min(10, Math.round(+body.mins || 0)));
+  if (body.feats && typeof body.feats === "object") {
+    for (const [k, n] of Object.entries(body.feats).slice(0, 40))
+      if (FEATURE.test(k)) d.feats[k] = (d.feats[k] || 0) + Math.max(0, Math.min(500, Math.round(+n || 0)));
+  }
+  const cutoff = dayOf(now - USAGE_DAYS * 86400e3);
+  for (const k of Object.keys(me.days)) if (k < cutoff) delete me.days[k];
+  usageDirty = true;
+}
+
+// Everyone's usage, for the owner: one row per person who has used the app
+async function usageStats() {
+  const u = await loadUsage(), now = Date.now();
+  let names = [];
+  try { names = (await fs.readdir(DATA_DIR)).filter(n => /^[0-9a-f]{24}\.json$/.test(n)); } catch {}
+  const docs = new Map();
+  for (const n of names) {
+    try { const d = JSON.parse(await fs.readFile(path.join(DATA_DIR, n), "utf8")); if (d.email) docs.set(d.email, d); } catch {}
+  }
+  const today = dayOf(now), last = n => Array.from({ length: n }, (_, i) => dayOf(now - i * 86400e3));
+  const d7 = last(7), d30 = last(30);
+  const live = list => (list || []).filter(x => !x.deleted);
+  const users = [...new Set([...Object.keys(u), ...docs.keys()])].map(email => {
+    const me = u[email] || { days: {}, devices: {} }, doc = docs.get(email);
+    const sum = (days, k) => days.reduce((a, d) => a + (me.days[d]?.[k] || 0), 0);
+    const feats = {};
+    for (const d of d30) for (const [k, n] of Object.entries(me.days[d]?.feats || {})) feats[k] = (feats[k] || 0) + n;
+    const pins = live(doc?.pins), tracks = live(doc?.tracks);
+    return {
+      email, name: nameOf(email, doc), owner: email === OWNER, partner: inGroup(email),
+      first: me.first || null, last: me.last || doc?.saved || null, synced: doc?.saved || null, version: me.version || null,
+      devices: Object.entries(me.devices).sort((a, b) => b[1] - a[1]).map(([label, t]) => ({ label, t })),
+      today: !!me.days[today],
+      days7: d7.filter(d => me.days[d]).length, days30: d30.filter(d => me.days[d]).length,
+      opens30: sum(d30, "opens"), mins30: sum(d30, "mins"), mins7: sum(d7, "mins"),
+      feats,
+      active: d30.filter(d => me.days[d]).reverse(),
+      content: {
+        pins: pins.length, logs: pins.reduce((a, p) => a + (p.log || []).length, 0),
+        photos: pins.reduce((a, p) => a + (p.photos || []).length, 0),
+        tracks: tracks.length, shapes: live(doc?.shapes).length,
+        shared: pins.filter(p => p.shared).length + tracks.filter(t => t.shared).length + live(doc?.shapes).filter(s => s.shared).length,
+      },
+    };
+  }).sort((a, b) => (b.last || 0) - (a.last || 0));
+  const days = d30.slice().reverse().map(d => ({ day: d, users: users.filter(x => u[x.email]?.days[d]).length }));
+  return { users, days, today, since: Math.min(...Object.values(u).map(x => x.first || now), now) };
+}
+
 // ---------- HTTP ----------
 function send(res, status, body, type = "application/json") {
   res.writeHead(status, { "Content-Type": type, "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" });
@@ -254,12 +346,17 @@ async function pruneOrphans(email, doc) {
 }
 
 const reply = async (email, doc) =>
-  ({ email, name: nameOf(email, doc), pins: doc.pins, tracks: doc.tracks, shapes: doc.shapes, group: await partnersOf(email) });
+  ({ email, name: nameOf(email, doc), owner: !!OWNER && email === OWNER, pins: doc.pins, tracks: doc.tracks, shapes: doc.shapes, group: await partnersOf(email) });
 
 async function api(req, res, email, url) {
   const { pathname } = url;
   if (pathname.startsWith("/api/photos/")) return photos(req, res, email, pathname.slice(12).split("/"), url.searchParams.get("o"));
   if (pathname === "/api/where") return whereApi(req, res, email);
+  if (pathname === "/api/ping" && req.method === "POST") { await ping(req, email, await readBody(req)); return send(res, 200, { ok: true }); }
+  if (pathname === "/api/usage") {
+    if (!OWNER || email !== OWNER || req.method !== "GET") return send(res, 404, { error: "Not found" });
+    return send(res, 200, await usageStats());
+  }
   if (pathname === "/api/me" && req.method === "POST") {
     const body = await readBody(req);
     const doc = await load(email);

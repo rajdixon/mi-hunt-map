@@ -37,7 +37,7 @@
   </button>
   <div id="status" class="status" data-state="off" role="status" aria-live="polite">
     <span class="status-dot" aria-hidden="true"></span>
-    <span id="status-text">Tap ◎ to check your spot</span>
+    <span id="status-text"><span class="touch-only">Tap</span><span class="mouse-only">Click</span> ◎ to check your spot</span>
   </div>
 </header>
 
@@ -182,7 +182,7 @@
   <p id="sync-status" class="sync-status" hidden></p>
   <div id="partners-card" class="partners-card" hidden></div>
   <div id="wind-card" class="wind-card"></div>
-  <p class="fine lead">Saved only on this phone. Tip: press and hold anywhere on the map to drop a pin there.</p>
+  <p class="fine lead">Tip: <span class="touch-only">press and hold</span><span class="mouse-only">right-click</span> anywhere on the map to drop a pin there.</p>
   <div class="save-actions pin-add">
     <button id="btn-pin-gps" class="btn-primary">Pin my location</button>
     <button id="btn-pin-center" class="btn-ghost">Pin map center</button>
@@ -310,6 +310,18 @@
   <div id="settings-body"></div>
 </section>
 
+<section id="sheet-usage" class="sheet sheet-wide" hidden aria-label="Usage stats">
+  <div class="sheet-grip" aria-hidden="true"></div>
+  <div class="sheet-head">
+    <div>
+      <div class="kind">Owner only</div>
+      <h2>Usage stats</h2>
+    </div>
+    <button class="sheet-close" data-close="sheet-usage" aria-label="Close">×</button>
+  </div>
+  <div id="usage-body"></div>
+</section>
+
 <section id="sheet-tracks" class="sheet" hidden aria-label="Tracks">
   <div class="sheet-grip" aria-hidden="true"></div>
   <div class="sheet-head">
@@ -373,6 +385,7 @@
 <script src="draw.js"></script>
 <script src="settings.js"></script>
 <script src="sync.js"></script>
+<script src="usage.js"></script>
 
 <div id="photo-viewer" class="photo-viewer" hidden role="dialog" aria-modal="true" aria-label="Photo">
   <div class="viewer-top">

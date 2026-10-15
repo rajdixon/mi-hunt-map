@@ -90,6 +90,10 @@ function applyServer(doc) {
     return [...m.values()].filter(x => !x.deleted && !tombs[k][x.id]);
   };
   if ("group" in doc && typeof setGroup === "function") setGroup(doc.group, doc.name);
+  if ("owner" in doc && !!doc.owner !== store.get("owner", false)) {
+    store.set("owner", !!doc.owner);
+    if (!$("sheet-settings").hidden) renderSettings();
+  }
   const newPins = take("pins", pins, doc.pins || []), newTracks = take("tracks", tracks, doc.tracks || []);
   const newShapes = take("shapes", shapes, doc.shapes || []);
   const changed = JSON.stringify(newPins) !== JSON.stringify(pins) || JSON.stringify(newTracks) !== JSON.stringify(tracks)

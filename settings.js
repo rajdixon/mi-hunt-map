@@ -1,7 +1,7 @@
 "use strict";
 // Settings (gear in the top bar): text size, distance units, night mode, keep
 // the screen on, battery saver, map labels and go-to walking pace. Kept on
-// this phone only.
+// this device only. The owner also gets a link to everyone's usage.
 
 const TEXT_SIZES = [["Small", 0.9], ["Normal", 1], ["Large", 1.15], ["Extra large", 1.3]];
 const UNITS = [["Yards & miles", "yd"], ["Feet & miles", "ft"], ["Meters & km", "m"]];
@@ -71,7 +71,7 @@ function renderSettings() {
   box.replaceChildren(
     el("h3", "sheet-sub", "Text size"),
     choice("Text size", TEXT_SIZES, settings.text, v => setSetting("text", v)),
-    el("p", "fine", "Makes buttons, panels and labels bigger. The map itself zooms with your fingers as usual."),
+    el("p", "fine", "Makes buttons, panels and labels bigger. The map itself zooms as usual."),
     el("h3", "sheet-sub", "Distances"),
     choice("Distances", UNITS, settings.units, v => setSetting("units", v)),
     el("p", "fine", settings.units === "m" ? "Areas in hectares." : settings.units === "yd" ? "Short distances when measuring show in feet. Areas in acres." : "Areas in acres."),
@@ -96,11 +96,19 @@ function renderSettings() {
   };
   const acts = el("div", "save-actions"); acts.append(guide, update);
   about.append(el("h3", "sheet-sub", "About"), acts,
-    el("p", "fine", `Version ${APP_VERSION}. Settings are saved on this phone only.`));
+    el("p", "fine", `Version ${APP_VERSION}. Settings are saved on this device only.`));
+  if (typeof isOwner === "function" && isOwner()) {
+    const owner = el("div", "settings-about");
+    const btn = el("button", "btn-primary", "Usage stats");
+    btn.type = "button"; btn.onclick = openUsage;
+    owner.append(el("h3", "sheet-sub", "Owner"), btn,
+      el("p", "fine", "Who uses the app, how often, on what devices, and which features. Only you see this."));
+    box.append(owner);
+  }
   box.append(about);
 }
 
-const APP_VERSION = "2026-10-13b";
+const APP_VERSION = "2026-10-15";
 $("btn-settings").addEventListener("click", () => {
   if (!$("sheet-settings").hidden) return closeSheet("sheet-settings");
   renderSettings();
