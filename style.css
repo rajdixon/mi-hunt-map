@@ -676,3 +676,18 @@ body.mouse .view-stack { bottom: max(calc(var(--safe-b) + 84px), calc(var(--shee
 .tilt-pad .fab.mini svg { width: 18px; height: 18px; fill: none; stroke: var(--ink); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
 .tilt-pad[hidden], body:not(.mouse) .tilt-pad { display: none; }
 .hills-note { margin: 6px 0 0; }
+
+/* Pins sheet: which pins show on the map */
+.pin-filter { display: grid; gap: 8px; margin: 4px 0 12px; padding: 12px; border-radius: 12px; background: var(--panel-2); border: 1px solid var(--line); }
+.pin-filter .glance-label { margin-bottom: 0; }
+.filter-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.filter-chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px 5px 6px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); font-size: 13px; }
+.filter-chip[aria-pressed="false"] { opacity: .45; text-decoration: line-through; }
+.filter-chip[aria-pressed="true"] { border-color: var(--ink-dim); }
+.filter-chip .pin-dot { width: 20px; height: 20px; }
+.filter-chip .pin-dot svg { width: 13px; height: 13px; }
+.filter-chip .ph-dot { width: 20px; height: 20px; font-size: 11px; }
+.filter-status { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.pin-row.off { opacity: .5; }
+.fab.filtered { position: relative; }
+.fab.filtered::after { content: ""; position: absolute; top: 6px; right: 6px; width: 9px; height: 9px; border-radius: 50%; background: var(--blaze); box-shadow: 0 0 0 2px var(--panel); }

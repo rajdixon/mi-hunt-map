@@ -68,7 +68,7 @@ async function drawScent() {
   const seq = ++scentSeq;
   if (!scentOn) { src.setData(empty()); return; }
   const feats = [];
-  for (const s of pins.filter(x => SCENT_FROM.includes(x.type))) {
+  for (const s of pins.filter(x => SCENT_FROM.includes(x.type) && (typeof pinVisible !== "function" || pinVisible(x, "me")))) {
     const fc = await getForecast(s.lng, s.lat);
     const p = periodAt(fc);
     if (!p) continue;

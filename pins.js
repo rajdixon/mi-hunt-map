@@ -39,12 +39,15 @@ function pinDot(type) {
   return s;
 }
 
-function pinMarkerEl(pin) {
+function pinMarkerEl(pin, also = []) {
   const t = PIN_TYPES[pin.type] || PIN_TYPES.other;
   const b = el("button", "pin");
   b.style.setProperty("--pin", t.color);
-  b.setAttribute("aria-label", `${t.label}: ${pin.name || "Unnamed"}`);
-  b.append(pinDot(pin.type), el("span", "pin-label", pin.name || ""));
+  b.setAttribute("aria-label", `${t.label}: ${pin.name || "Unnamed"}${also.length ? `, also pinned by ${also.join(", ")}` : ""}`);
+  const dot = pinDot(pin.type);
+  // A partner pinned this spot too (their copy is hidden; pinfilter.js)
+  if (also.length) dot.append(el("span", "partner-badge", also.length > 1 ? String(also.length) : initial(also[0])));
+  b.append(dot, el("span", "pin-label", pin.name || ""));
   b.addEventListener("click", e => {
     e.stopPropagation();
     if (typeof measure !== "undefined" && measure) measureAdd([pin.lng, pin.lat]);
@@ -57,8 +60,9 @@ function pinMarkerEl(pin) {
 function drawPins() {
   for (const m of markers.values()) m.remove();
   markers.clear();
-  for (const p of pins)
-    markers.set(p.id, new maplibregl.Marker({ element: pinMarkerEl(p), anchor: "center" }).setLngLat([p.lng, p.lat]).addTo(map));
+  const filtered = typeof pinVisible === "function", also = filtered ? pinCopies().alsoOn : new Map();
+  for (const p of pins) if (!filtered || pinVisible(p, "me"))
+    markers.set(p.id, new maplibregl.Marker({ element: pinMarkerEl(p, also.get(p.id)), anchor: "center" }).setLngLat([p.lng, p.lat]).addTo(map));
   if (typeof drawScent === "function") drawScent();
 }
 
@@ -112,6 +116,7 @@ async function renderPinList() {
     const t = PIN_TYPES[p.type] || PIN_TYPES.other;
     const li = el("li");
     const b = el("button", "pin-row");
+    if (typeof pinVisible === "function" && !pinVisible(p, "me")) { b.classList.add("off"); b.title = "Hidden on the map (Show on map, above)"; }
     const text = el("span", "pin-row-text");
     const meta = here ? `${t.label} · ${fmtDist(distMeters(here, [p.lng, p.lat]))} ${bearing(here, [p.lng, p.lat])}`
                       : `${t.label} · ${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}`;

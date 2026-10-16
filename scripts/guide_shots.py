@@ -206,6 +206,20 @@ def _(b):
     ctx.close()
 
 
+@shot("pinfilter")
+def _(b):
+    ctx, pg = open_app(b, locate=False)
+    # Dave pinned the Ridge stand too: his copy hides and the stand gets his initial
+    pg.evaluate("""() => { const r = pins.find(p => p.name === 'Ridge stand'), d = group.partners.find(p => p.name === 'Dave');
+      d.pins.push({ id: 'dup1', name: 'Ridge', type: 'stand', lng: r.lng + 0.0001, lat: r.lat + 0.00005 }); drawPartners(); }""")
+    pg.click("#btn-pins")
+    pg.wait_for_timeout(800)
+    pg.click("#pin-filter .filter-chip:has-text('Jen')")
+    pg.click("#pin-filter .filter-chip:has-text('Parking')")
+    save(pg, "pinfilter")
+    ctx.close()
+
+
 @shot("desktop")
 def _(b):
     ctx, pg = open_app(b, DESKTOP)

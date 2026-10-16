@@ -128,17 +128,19 @@ function partnerPinEl(pin, partner) {
 function drawPartners() {
   for (const m of partnerMarkers) m.remove();
   partnerMarkers.length = 0;
-  const ps = hasPartners() ? group.partners : [];
-  for (const partner of ps) for (const pin of partner.pins)
+  const ps = (hasPartners() ? group.partners : []).filter(p => typeof personShown !== "function" || personShown(p.key));
+  const copies = typeof pinCopies === "function" ? pinCopies().hidden : new Set();
+  for (const partner of ps) for (const pin of partner.pins) if (!copies.has(pin.id) && (typeof pinVisible !== "function" || pinVisible(pin, partner.key)))
     partnerMarkers.push(new maplibregl.Marker({ element: partnerPinEl(pin, partner), anchor: "center" }).setLngLat([pin.lng, pin.lat]).addTo(map));
   map.getSource("partner-tracks")?.setData({ type: "FeatureCollection", features: ps.flatMap(partner => partner.tracks
     .filter(t => t.points?.length > 1)
     .map(t => ({ type: "Feature", properties: { key: partner.key, id: t.id }, geometry: { type: "LineString", coordinates: t.points.map(p => [p[0], p[1]]) } }))) });
   drawPartnerShapes();
+  if (typeof pinCopies === "function") drawPins();   // your pins' "also pinned by" badges
 }
 
 function drawPartnerShapes() {
-  const ps = hasPartners() ? group.partners : [];
+  const ps = (hasPartners() ? group.partners : []).filter(p => typeof personShown !== "function" || personShown(p.key));
   map.getSource("partner-shapes")?.setData({ type: "FeatureCollection", features: ps.flatMap(partner =>
     shapesFC(partner.shapes, { key: partner.key }).features) });
 }
