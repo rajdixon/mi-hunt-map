@@ -3,7 +3,7 @@
 // Land data: cache-first; a data refresh bumps VERSION to replace it.
 // Basemap tiles: areas saved from the Offline maps sheet (never trimmed),
 // plus tiles cached as you browse (up to MAX_TILES).
-const VERSION = "v31-2026-10-16";
+const VERSION = "v32-2026-10-16";
 const SHELL = `shell-${VERSION}`;
 const TILES = "tiles-v1";
 const PHOTOS = "photos-v1";
@@ -81,15 +81,20 @@ self.addEventListener("fetch", e => {
 
 async function networkFirst(req) {
   const cache = await caches.open(SHELL);
+  const saved = await cache.match(req, { ignoreSearch: true });
+  const net = fetch(req, { cache: "no-cache" });
   try {
-    const res = await Promise.race([
-      fetch(req, { cache: "no-cache" }),
-      new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 3000)),
-    ]);
-    if (res.ok) cache.put(req, res.clone());
-    return res;
+    // With a saved copy, give the network 3 seconds; without one, wait for it
+    const res = saved ? await Promise.race([net,
+      new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 3000))]) : await net;
+    if (res.ok) { cache.put(req, res.clone()); return res; }
+    // A page load that needs signing in again must reach the sign-in page.
+    // Anything else (a script answered by a sign-in redirect or an error) would
+    // break the app, so use the saved copy.
+    if (req.mode === "navigate" || !saved) return res;
+    return saved;
   } catch {
-    return (await cache.match(req, { ignoreSearch: true })) || Response.error();
+    return saved || Response.error();
   }
 }
 

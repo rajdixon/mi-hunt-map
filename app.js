@@ -118,12 +118,10 @@ map.on("load", async () => {
     });
   }
 
-  await Promise.all(LAYERS.map(async l => {
-    const res = await fetch(`data/${l.id}.geojson`);
-    const fc = await res.json();
-    fc.features.forEach(f => { f.bbox = bboxOf(f.geometry); });
-    data[l.id] = fc;
-  }));
+  // Show the basemap first, so a slow or failed land file never leaves a blank map
+  setBasemap(basemap);
+
+  await Promise.all(LAYERS.map(async l => { data[l.id] = await landData(l.id); }));
 
   for (const l of LAYERS) {
     map.addSource(l.id, { type: "geojson", data: data[l.id], tolerance: 0.25 });
@@ -154,8 +152,26 @@ map.on("load", async () => {
   setBasemap(basemap);
   buildLayerList();
   fetch("data/meta.json").then(r => r.json()).then(m => { $("data-date").textContent = m.updated; }).catch(() => {});
+  // The other scripts listen for this; on a slow connection the map can be
+  // ready before they've all arrived, so wait until every one has run
+  if (document.readyState === "loading") await new Promise(r => document.addEventListener("DOMContentLoaded", r, { once: true }));
   document.dispatchEvent(new Event("land-ready"));
 });
+
+// One land layer's shapes. Tries a few times (a dropped connection, or a sign-in
+// that has just expired), then carries on without that layer rather than stopping.
+async function landData(id) {
+  for (let i = 0; i < 3; i++) {
+    try {
+      const res = await fetch(`data/${id}.geojson`);
+      if (!res.ok) throw new Error(res.status);
+      const fc = await res.json();
+      fc.features.forEach(f => { f.bbox = bboxOf(f.geometry); });
+      return fc;
+    } catch { await new Promise(r => setTimeout(r, 1500 * (i + 1))); }
+  }
+  return { type: "FeatureCollection", features: [] };
+}
 
 map.on("moveend", () => {
   const c = map.getCenter();
