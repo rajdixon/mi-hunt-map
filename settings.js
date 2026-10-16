@@ -108,7 +108,7 @@ function renderSettings() {
   box.append(about);
 }
 
-const APP_VERSION = "2026-10-16c";
+const APP_VERSION = "2026-10-16d";
 $("btn-settings").addEventListener("click", () => {
   if (!$("sheet-settings").hidden) return closeSheet("sheet-settings");
   renderSettings();

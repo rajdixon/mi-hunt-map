@@ -194,6 +194,18 @@ def _(b):
     ctx.close()
 
 
+@shot("outlook")
+def _(b):
+    ctx, pg = open_app(b, locate=False)
+    pg.click("#hours-chip")
+    pg.wait_for_timeout(1500)
+    pg.click(".date-step[aria-label='Next day']")   # tomorrow: the whole day ahead
+    pg.wait_for_selector(".act-bars", timeout=20000)
+    pg.evaluate("document.querySelector('.act').scrollIntoView({ block: 'start' }); document.querySelector('.sheet-body, #sheet-rules .body')?.scrollBy?.(0, -20)")
+    save(pg, "outlook")
+    ctx.close()
+
+
 @shot("desktop")
 def _(b):
     ctx, pg = open_app(b, DESKTOP)

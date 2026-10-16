@@ -77,7 +77,7 @@ function renderOutlook({ glance, strip, detail }, place, iso, pt) {
   const showNow = iso === huntDay(place);   // today, or tomorrow after legal light ends
 
   const nowBox = el("div", "glance-now"), dayBox = el("div", "glance-day"), standBox = el("div", "glance-stands");
-  const verdict = el("div", "verdict");
+  const verdict = el("div", "verdict"), chart = el("div");
   nowBox.hidden = !showNow; standBox.hidden = true; verdict.hidden = true;
   glance.insertBefore(verdict, glance.children[1] || null);
   dayBox.append(el("p", "fine", "Loading forecast…"));
@@ -85,7 +85,10 @@ function renderOutlook({ glance, strip, detail }, place, iso, pt) {
   const ph = moonPhase(iso, tz), ev = moonEvents(iso, tz, lat, lng);
   const moonLine = el("div", "glance-line");
   moonLine.append(el("span", "glance-ico", ph.icon), `${ph.name} · ${ph.lit}% lit`);
-  glance.append(nowBox, dayBox, standBox, moonLine);
+  const rut = rutPhase(iso, place), rutLine = el("div", "glance-line rut-line");
+  rutLine.append(el("span", "glance-ico", "🍂"), el("span", null, ""));
+  rutLine.lastChild.append(el("strong", null, `Rut: ${rut.name}. `), rut.note);
+  glance.append(nowBox, dayBox, chart, standBox, rutLine, moonLine);
 
   // Detail: weather wording, then moon and solunar
   const wxMore = el("div", "outlook-wx");
@@ -111,17 +114,26 @@ function renderOutlook({ glance, strip, detail }, place, iso, pt) {
     "Solunar times are a hunting tradition, not proven science: GPS-collar studies (Penn State, NC State, King Ranch) " +
     "found moon phase made little difference to deer movement. Temperature was the most consistent predictor, " +
     "so look for days marked as cold snaps. Pressure findings are mixed; a front passing (↓↑) usually brings the cold snap.");
-  detail.append(wxMore, moon, solP, note);
-  drawStrip(strip, null, place, iso);
+  const how = el("p", "fine",
+    "The activity forecast scores each day 1 to 5 from the rut (typical Michigan dates; the U.P. runs a few days earlier), " +
+    "cold snaps, pressure changes, whether your stands get their wind, and wind, rain and heat during legal hours. " +
+    "The hourly bars peak around first and last light, rise at midday during the rut, and dip in hours that are windy, wet or warm. " +
+    `Once your pins have ${MIN_LOG_SITS} sits logged, it also leans toward the temperatures, pressure and time of day you've seen deer in. ` +
+    "The moon is left out. It's a guide, not a promise.");
+  detail.append(wxMore, moon, solP, note, how);
+  drawStrip(strip, null, place, iso, pt);
 
   getForecast(lng, lat).then(fc => {
     if (!glance.isConnected || rules.date !== iso) return;
     if (showNow) fillNow(nowBox, fc);
     fillDay(dayBox, fc, iso, h, tz, fmt, isToday ? "Today's outlook" : iso === addDays(today, 1) ? "Tomorrow's outlook" : "Outlook");
-    const stands = fillStands(standBox, fc, iso, h, tz, pt, fmt);
-    fillVerdict(verdict, fc, iso, h, tz, stands);
+    fillStands(standBox, fc, iso, h, tz, pt, fmt);
+    const log = logRates(), act = fc && dayActivity(fc, iso, place, pt, log);
+    fillVerdict(verdict, act);
+    const hours = fc && h ? hourlyActivity(fc, iso, place, pt, act, log) : [];
+    if (act && hours.length) chart.replaceWith(activityChart(hours, fmt));
     fillWeatherMore(wxMore, fc, iso, tz, fmt);
-    drawStrip(strip, fc, place, iso);
+    drawStrip(strip, fc, place, iso, pt, log);
   });
 }
 
@@ -252,35 +264,16 @@ function standPattern(pin, hours) {
   return { text: `Your log: deer on ${best.deer} of ${best.sits} ${label} sits${today ? ` · ${best.value === "Calm" ? "calm" : best.value} is forecast` : ""}`, today };
 }
 
-// One line on how the day looks for deer movement, and why. Weighted by what
-// the GPS-collar studies found: a temperature drop matters most, a pressure
-// change some; strong wind, steady rain and heat keep deer bedded.
-function fillVerdict(box, fc, iso, h, tz, stands) {
+// How the day looks for deer movement (activity.js works it out), and why
+function fillVerdict(box, act) {
   box.hidden = true; box.replaceChildren();
-  const d = fc?.days?.find(x => x.date === iso);
-  if (!fc || !h || !d) return;
-  const mid = tzMidnight(iso, tz);
-  const huntHours = [periodAt(fc, new Date(mid + (h.open + 15) * 60000)), periodAt(fc, new Date(mid + (h.close - 45) * 60000))].filter(Boolean);
-  const plus = [], minus = [];
-  let score = 0;
-  const drop = frontDrop(fc.days, iso);
-  if (drop) { score += 2; plus.push(`cold snap (${drop}° cooler)`); }
-  const dp = dayPressure(fc, mid);
-  if (dp && dp.kind !== "steady") { score += 1; plus.push(dp.kind === "front" ? "front passing" : `pressure ${dp.kind}`); }
-  if (stands.fit) { score += 1; plus.push(`${stands.fit} stand${stands.fit === 1 ? "" : "s"} fit the wind`); }
-  else if (stands.near) { score -= 1; minus.push("no stand fits the wind"); }
-  const windy = Math.max(0, ...huntHours.map(p => p.mph));
-  if (windy >= 15) { score -= windy >= 25 ? 2 : 1; minus.push(`${windy >= 25 ? "very windy" : "windy"} (${windy} mph)`); }
-  const wet = Math.max(0, ...huntHours.map(p => p.pop ?? 0));
-  if (wet >= 60) { score -= 1; minus.push(`rain likely (${wet}%)`); }
-  const high = d.day?.temp;
-  if (high != null && high >= 70) { score -= 1; minus.push(`warm (high ${high}°)`); }
-  const [label, kind] = score >= 2 ? ["Good day to hunt", "good"] : score >= 0 ? ["Fair day", "fair"] : ["Slow day", "slow"];
-  box.dataset.kind = kind;
-  const why = [...plus.map(x => "+ " + x), ...minus.map(x => "− " + x)];
-  box.append(el("strong", "verdict-label", label),
-    el("span", "verdict-why", why.length ? why.join("  ") : "Nothing stands out either way"));
-  box.title = "A guide from the forecast, not a promise: temperature drops matter most in the studies, pressure changes some.";
+  if (!act) return;
+  box.dataset.kind = act.kind;
+  const head = el("div", "verdict-head");
+  head.append(el("strong", "verdict-label", act.label), activityPips(act));
+  const why = [...act.plus.map(x => "+ " + x), ...act.minus.map(x => "− " + x)];
+  box.append(head, el("span", "verdict-why", why.length ? why.join("  ") : "Nothing stands out either way"));
+  box.title = "A guide from the forecast, not a promise: the rut and temperature drops matter most in the studies, pressure changes some.";
   box.hidden = false;
 }
 
@@ -307,8 +300,8 @@ function fillWeatherMore(box, fc, iso, tz, fmt) {
     (fc.pressure ? ". Arrows show the last 3 hours: ⇈/⇊ is a rapid change (0.06 in or more)." : "")));
 }
 
-// Seven days from today: moon, high/low, cold snaps and pressure. Tap a day to pick it.
-function drawStrip(strip, fc, place, iso) {
+// Seven days from today: activity score, moon, high/low, cold snaps and pressure. Tap a day to pick it.
+function drawStrip(strip, fc, place, iso, pt, log) {
   strip.replaceChildren();
   const today = nowIn(place.tz).iso;
   for (let i = 0; i < 7; i++) {
@@ -321,6 +314,8 @@ function drawStrip(strip, fc, place, iso) {
     b.append(el("span", "od-name", i === 0 ? "Today" : fmtWxDay.format(new Date(d + "T12:00:00Z"))),
              el("span", "od-moon", moonPhase(d, place.tz).icon),
              el("span", "od-temp", f ? [f.day?.temp, f.night?.temp].map(t => t == null ? "–" : `${t}°`).join(" ") : "–"));
+    const act = fc && dayActivity(fc, d, place, pt, log);
+    if (act) b.append(activityPips(act));
     const drop = fc ? frontDrop(fc.days, d) : 0;
     if (drop) b.append(el("span", "od-front", `▼${drop}°`));
     const dp = fc && dayPressure(fc, tzMidnight(d, place.tz));

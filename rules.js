@@ -279,7 +279,7 @@ function renderRules() {
   body.append(glance);
 
   // Next 7 days, tap one to pick it
-  body.append(el("div", "week-title", "Next 7 days: moon, high / low, ▼ cold snap, pressure"), strip);
+  body.append(el("div", "week-title", "Next 7 days: deer activity, moon, high / low, ▼ cold snap, pressure"), strip);
 
   // ---- Details ----
   body.append(el("h3", "detail-head", "More detail"));
