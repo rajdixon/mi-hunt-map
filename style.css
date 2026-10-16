@@ -644,3 +644,14 @@ body.mouse .view-stack { bottom: max(calc(var(--safe-b) + 84px), calc(var(--shee
 .fab.mini .needle-n { fill: #e5534b; }
 .fab.mini .needle-s { fill: var(--ink); }
 @media (max-width: 699px) { body:has(.sheet:not([hidden])) .view-stack { display: none; } }
+/* Tilt and turn buttons, with a mouse, while 3D is on: a diamond of four */
+.tilt-pad { display: grid; grid-template: repeat(3, 34px) / repeat(3, 34px); gap: 2px; margin-bottom: 6px; }
+.tilt-pad .tilt-row { display: contents; }
+.tilt-pad [data-tilt="15"] { grid-area: 1 / 2; }
+.tilt-pad [data-turn="-30"] { grid-area: 2 / 1; }
+.tilt-pad [data-turn="30"] { grid-area: 2 / 3; }
+.tilt-pad [data-tilt="-15"] { grid-area: 3 / 2; }
+.tilt-pad .fab.mini { width: 34px; height: 34px; }
+.tilt-pad .fab.mini svg { width: 18px; height: 18px; fill: none; stroke: var(--ink); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.tilt-pad[hidden], body:not(.mouse) .tilt-pad { display: none; }
+.hills-note { margin: 6px 0 0; }

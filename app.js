@@ -75,7 +75,7 @@ const map = new maplibregl.Map({
   zoom: store.get("zoom", 6),
   maxBounds: [[-93.5, 40.5], [-80.5, 49.5]],
   attributionControl: { compact: true, customAttribution: "Michigan DNR" },
-  dragRotate: false, maxPitch: 70,   // rotate and tilt only in 3D view (view3d.js)
+  dragRotate: false, maxPitch: 75,   // rotate and tilt only in 3D view (view3d.js)
 });
 map.touchZoomRotate.disableRotation();
 const scaleControl = new maplibregl.ScaleControl({ unit: "imperial" });
