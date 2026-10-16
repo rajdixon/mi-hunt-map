@@ -294,11 +294,11 @@ function updateZoomHints() {
 
 async function refreshOverlays() {
   updateZoomHints();
-  const z = map.getZoom(), b = map.getBounds();
+  // Tilted (3D), load the ground near the middle of the screen and a bit beyond, not out to the horizon
+  const z = map.getZoom(), view = flatBounds(map.getPitch() < 1 ? 1 : 2);
   // Fetch a margin around the view so small pans don't refetch
-  const dx = (b.getEast() - b.getWest()) * 0.25, dy = (b.getNorth() - b.getSouth()) * 0.25;
-  const want = [b.getWest() - dx, b.getSouth() - dy, b.getEast() + dx, b.getNorth() + dy];
-  const view = [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()];
+  const dx = (view[2] - view[0]) * 0.25, dy = (view[3] - view[1]) * 0.25;
+  const want = [view[0] - dx, view[1] - dy, view[2] + dx, view[3] + dy];
   for (const o of OVERLAYS) {
     if (!overlayOn[groupOf(o)]) continue;
     const src = map.getSource(`ov-${o.id}`);

@@ -120,6 +120,13 @@
   </button>
 </div>
 
+<div class="view-stack">
+  <button id="btn-compass" class="fab mini" aria-label="Point north" title="Point north" hidden>
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5 16 12h-8Z" class="needle-n"/><path d="M8 12h8l-4 9.5Z" class="needle-s"/></svg>
+  </button>
+  <button id="btn-3d" class="fab mini" aria-label="3D view" title="3D view" aria-pressed="false"><span>3D</span></button>
+</div>
+
 <div id="coords" class="coords" hidden></div>
 
 <section id="sheet-layers" class="sheet" hidden aria-label="Layers">
@@ -393,6 +400,7 @@
 <script src="pins.js"></script>
 <script src="tracks.js"></script>
 <script src="overlays.js"></script>
+<script src="view3d.js"></script>
 <script src="search.js"></script>
 <script src="scent.js"></script>
 <script src="stats.js"></script>

@@ -75,7 +75,7 @@ const map = new maplibregl.Map({
   zoom: store.get("zoom", 6),
   maxBounds: [[-93.5, 40.5], [-80.5, 49.5]],
   attributionControl: { compact: true, customAttribution: "Michigan DNR" },
-  dragRotate: false, pitchWithRotate: false,
+  dragRotate: false, maxPitch: 70,   // rotate and tilt only in 3D view (view3d.js)
 });
 map.touchZoomRotate.disableRotation();
 const scaleControl = new maplibregl.ScaleControl({ unit: "imperial" });
@@ -468,8 +468,22 @@ function tileKey(url) {
 }
 
 function viewBounds() {
-  const b = map.getBounds();
-  return [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()].map(v => +v.toFixed(5));
+  return flatBounds().map(v => +v.toFixed(5));
+}
+
+// The area the screen would show looking straight down. A tilted map's
+// bounds run out to the horizon, far more than anyone means by "this view".
+function flatBounds(scale = 1) {
+  if (map.getPitch() < 1 && Math.abs(map.getBearing()) < 1 && scale === 1) {
+    const b = map.getBounds();
+    return [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()];
+  }
+  const c = map.getCenter(), c2 = map.getContainer(), p = map.getPadding();
+  const degPerPx = 360 / (512 * 2 ** map.getZoom());
+  const w = (c2.clientWidth - p.left - p.right) * degPerPx * scale / 2;
+  const h = (c2.clientHeight - p.top - p.bottom) * degPerPx * Math.cos(c.lat * Math.PI / 180) * scale / 2;
+  const r = Math.max(w, h);   // rotated: cover every way round
+  return Math.abs(map.getBearing()) < 1 ? [c.lng - w, c.lat - h, c.lng + w, c.lat + h] : [c.lng - r, c.lat - r, c.lng + r, c.lat + r];
 }
 
 function areasGeoJSON() {

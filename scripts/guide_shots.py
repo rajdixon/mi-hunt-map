@@ -182,6 +182,18 @@ def _(b):
     ctx.close()
 
 
+@shot("view3d")
+def _(b):
+    ctx, pg = open_app(b, locate=False)
+    pg.evaluate("setBasemap('sat'); map.jumpTo({ center: [-84.95, 45.045], zoom: 13.6, bearing: 0 })")
+    pg.click("#btn-3d")
+    pg.wait_for_timeout(1500)
+    pg.evaluate("map.easeTo({ bearing: 160, pitch: 65, duration: 0 })")
+    pg.wait_for_timeout(8000)   # elevation and imagery tiles
+    save(pg, "view3d")
+    ctx.close()
+
+
 @shot("desktop")
 def _(b):
     ctx, pg = open_app(b, DESKTOP)
