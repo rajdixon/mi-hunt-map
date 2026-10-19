@@ -8,6 +8,8 @@ import datetime
 import json
 import pathlib
 import sys
+import time
+import urllib.error
 import urllib.parse
 import urllib.request
 
@@ -33,10 +35,33 @@ SOURCES = {
 OFFSET = 0.00008  # degrees, about 8 m: invisible at field zooms, cuts size a lot
 
 
-def get(url, params):
+def get(url, params, tries=4):
+    # The DNR servers sometimes time out (504) or drop a request; wait and try again
     data = urllib.parse.urlencode(params).encode()
-    with urllib.request.urlopen(urllib.request.Request(url, data=data), timeout=180) as r:
-        return json.load(r)
+    for n in range(tries):
+        try:
+            with urllib.request.urlopen(urllib.request.Request(url, data=data), timeout=180) as r:
+                out = json.load(r)
+            if "error" in out:   # ArcGIS reports some failures inside a 200 response
+                raise urllib.error.URLError(out["error"].get("message", "server error"))
+            return out
+        except (urllib.error.URLError, TimeoutError, ConnectionError, json.JSONDecodeError) as e:
+            if n == tries - 1:
+                raise
+            wait = 30 * (n + 1)
+            print(f"  {e}; trying again in {wait} s", flush=True)
+            time.sleep(wait)
+
+
+def get_features(url, base, chunk):
+    """One batch of features; a batch that keeps timing out is split in half."""
+    try:
+        return get(url, {**base, "objectIds": ",".join(map(str, chunk)), "where": "1=1"})["features"]
+    except (urllib.error.URLError, TimeoutError, ConnectionError, json.JSONDecodeError):
+        if len(chunk) <= 25:
+            raise
+        half = len(chunk) // 2
+        return get_features(url, base, chunk[:half]) + get_features(url, base, chunk[half:])
 
 
 def fetch(title, fields, extra):
@@ -58,8 +83,7 @@ def fetch(title, fields, extra):
     feats = []
     for i in range(0, len(ids), 500):
         chunk = ids[i:i + 500]
-        fc = get(url, {**base, "objectIds": ",".join(map(str, chunk)), "where": "1=1"})
-        for f in fc["features"]:
+        for f in get_features(url, base, chunk):
             if not f.get("geometry"):
                 continue
             props = f["properties"]
@@ -72,9 +96,18 @@ def fetch(title, fields, extra):
 
 
 if __name__ == "__main__":
+    failed = []
     for name, (title, fields, extra) in SOURCES.items():
-        fc = fetch(title, fields, extra)
         path = ROOT / "data" / f"{name}.geojson"
+        try:
+            fc = fetch(title, fields, extra)
+        except Exception as e:
+            # Keep last week's copy of this layer and still update the rest
+            if not path.exists():
+                raise
+            print(f"::warning::{name}: download failed ({e}); keeping the old copy", flush=True)
+            failed.append(name)
+            continue
         # Refuse to overwrite good data with a partial download (service outage, filter change)
         if path.exists():
             before = len(json.loads(path.read_text())["features"])
@@ -82,4 +115,7 @@ if __name__ == "__main__":
                 sys.exit(f"{name}: got {len(fc['features'])} features, had {before}. Not overwriting.")
         path.write_text(json.dumps(fc, separators=(",", ":")))
         print(f"{name:18} {len(fc['features']):6} features  {path.stat().st_size / 1e6:6.1f} MB")
-    (ROOT / "data" / "meta.json").write_text(json.dumps({"updated": datetime.date.today().isoformat()}))
+    if len(failed) == len(SOURCES):
+        sys.exit("Every layer failed to download; the DNR servers may be down.")
+    if not failed:
+        (ROOT / "data" / "meta.json").write_text(json.dumps({"updated": datetime.date.today().isoformat()}))
