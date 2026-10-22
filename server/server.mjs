@@ -388,6 +388,17 @@ async function api(req, res, email, url) {
   if (pathname === "/api/notes" || pathname.startsWith("/api/notes/"))
     return notesApi(req, res, email, pathname.slice(11), () => readBody(req), send, !!OWNER && email === OWNER);
   if (pathname === "/api/ping" && req.method === "POST") { await ping(req, email, await readBody(req)); return send(res, 200, { ok: true }); }
+  // Owner-only map layers built off the server (files in DATA_DIR/private)
+  if (pathname.startsWith("/api/private/")) {
+    const name = pathname.slice(13);
+    if (!OWNER || email !== OWNER || req.method !== "GET" || !/^[a-z0-9-]+\.(json|geojson|png)$/.test(name)) return send(res, 404, { error: "Not found" });
+    try {
+      const body = await fs.readFile(path.join(DATA_DIR, "private", name));
+      const type = name.endsWith(".png") ? "image/png" : "application/json";
+      res.writeHead(200, { "Content-Type": type, "Cache-Control": "private, no-cache", "X-Content-Type-Options": "nosniff" });
+      return res.end(body);
+    } catch { return send(res, 404, { error: "Not found" }); }
+  }
   if (pathname === "/api/usage") {
     if (!OWNER || email !== OWNER || req.method !== "GET") return send(res, 404, { error: "Not found" });
     return send(res, 200, await usageStats());

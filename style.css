@@ -691,3 +691,10 @@ body.mouse .view-stack { bottom: max(calc(var(--safe-b) + 84px), calc(var(--shee
 .pin-row.off { opacity: .5; }
 .fab.filtered { position: relative; }
 .fab.filtered::after { content: ""; position: absolute; top: 6px; right: 6px; width: 9px; height: 9px; border-radius: 50%; background: var(--blaze); box-shadow: 0 0 0 2px var(--panel); }
+
+/* Owner's private layers */
+.priv-legend { display: grid; gap: 3px; margin: 2px 0 6px 34px; }
+.priv-key { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--ink-dim); }
+.priv-key i { width: 14px; height: 10px; border-radius: 2px; flex: none; }
+.priv-spot { width: 24px; height: 24px; border-radius: 50%; border: 2px solid #1c2118; color: #1c2118; font: 700 12px/1 var(--body);
+  display: grid; place-items: center; padding: 0; box-shadow: 0 1px 4px rgba(0,0,0,.4); }

@@ -189,7 +189,8 @@ map.on("click", e => {
   if (typeof partnerShapeAt === "function" && partnerShapeAt(e.point)) return;
   const hits = hitsAt([e.lngLat.lng, e.lngLat.lat], true);
   // Overlay features under the tap (stand, road, trail, section...), from overlays.js
-  const extras = typeof overlayHitsAt === "function" ? overlayHitsAt(e.point) : [];
+  const extras = [...(typeof overlayHitsAt === "function" ? overlayHitsAt(e.point) : []),
+                  ...(typeof privateHitsAt === "function" ? privateHitsAt(e) : [])];
   if (!hits.length && !extras.length) { closeSheet("sheet-info"); map.getSource("sel").setData(empty()); return; }
   showInfo(hits[0], e.lngLat, extras);
 });
