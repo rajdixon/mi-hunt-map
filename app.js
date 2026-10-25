@@ -142,6 +142,12 @@ map.on("load", async () => {
   map.addLayer({ id: "sel-line", type: "line", source: "sel",
                  paint: { "line-color": "#ff6a13", "line-width": 3 } });
   map.addSource("me", { type: "geojson", data: empty() });
+  // Which way the phone is facing: a fading cone under the dot (heading from goto.js)
+  map.addImage("me-cone", coneImage(), { pixelRatio: 2 });
+  map.addSource("me-heading", { type: "geojson", data: empty() });
+  map.addLayer({ id: "me-cone", type: "symbol", source: "me-heading",
+                 layout: { "icon-image": "me-cone", "icon-rotate": ["get", "heading"], "icon-rotation-alignment": "map",
+                           "icon-allow-overlap": true, "icon-ignore-placement": true } });
   map.addLayer({ id: "me-acc", type: "fill", source: "me", filter: ["==", "$type", "Polygon"],
                  paint: { "fill-color": "#3d8bff", "fill-opacity": 0.15 } });
   map.addLayer({ id: "me-halo", type: "circle", source: "me", filter: ["==", "$type", "Point"],
@@ -280,6 +286,7 @@ $("btn-locate").addEventListener("click", () => {
   if (!("geolocation" in navigator)) return setStatus("off", "Location not available on this device");
   setStatus("wait", "Finding you…");
   $("btn-locate").setAttribute("aria-pressed", "true");
+  if (typeof startCompass === "function") startCompass();   // iPhone only asks from a tap
   startWatch();
 });
 
@@ -324,6 +331,7 @@ function onFix(pos) {
     circle(lng, lat, accuracy),
     { type: "Feature", properties: {}, geometry: { type: "Point", coordinates: lastFix } },
   ] });
+  if (typeof drawHeading === "function") drawHeading();
   if (first) map.flyTo({ center: lastFix, zoom: Math.max(map.getZoom(), 14), speed: 1.6 });
   else if (follow) map.easeTo({ center: lastFix, duration: 600 });
 
@@ -349,6 +357,24 @@ function onFixError(err) {
 function setStatus(state, text) {
   $("status").dataset.state = state;
   $("status-text").textContent = text;
+}
+
+// A wedge pointing up from the image center, fading out toward its tip
+function coneImage() {
+  const size = 260, c = document.createElement("canvas");
+  c.width = c.height = size;
+  const g = c.getContext("2d"), r = size / 2, half = 28 * Math.PI / 180;
+  const grad = g.createRadialGradient(r, r, 0, r, r, r);
+  grad.addColorStop(0, "rgba(61,139,255,.95)");
+  grad.addColorStop(.6, "rgba(61,139,255,.45)");
+  grad.addColorStop(1, "rgba(61,139,255,0)");
+  g.fillStyle = grad;
+  g.beginPath();
+  g.moveTo(r, r);
+  g.arc(r, r, r, -Math.PI / 2 - half, -Math.PI / 2 + half);
+  g.closePath();
+  g.fill();
+  return g.getImageData(0, 0, size, size);
 }
 
 function circle(lng, lat, meters) {

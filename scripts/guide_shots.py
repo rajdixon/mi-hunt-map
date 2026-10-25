@@ -90,7 +90,7 @@ def shot(name):
 
 def open_app(browser, size=PHONE, locate=True):
     ctx = browser.new_context(**size, geolocation={"longitude": HERE[0], "latitude": HERE[1], "accuracy": 6},
-                              permissions=["geolocation", "notifications"])   # DEV_USER is ME; a custom header would break tile requests
+                              permissions=["geolocation", "notifications", "accelerometer", "gyroscope", "magnetometer"])   # DEV_USER is ME; a custom header would break tile requests
     ctx.add_init_script(f"""localStorage.setItem("mhl:center", '{json.dumps(list(HERE))}');
         localStorage.setItem("mhl:zoom", "15"); localStorage.setItem("mhl:where:share", "false");""")
     pg = ctx.new_page()
@@ -99,6 +99,9 @@ def open_app(browser, size=PHONE, locate=True):
     if locate:
         pg.click("#btn-locate")
         pg.wait_for_timeout(4000)
+        # Headless Chromium has no compass: face the phone northeast so the cone shows
+        pg.evaluate("""() => { const e = new Event("deviceorientation"); e.webkitCompassHeading = 50;
+            dispatchEvent(e); }""")
     return ctx, pg
 
 

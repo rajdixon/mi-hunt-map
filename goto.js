@@ -1,6 +1,6 @@
 "use strict";
 // Go to: a live arrow, distance and walking time to a pin (or a partner),
-// from GPS and the phone's compass. Works with no signal. Without a compass
+// from GPS and the phone's compass (which also turns the cone on your dot). Works with no signal. Without a compass
 // the arrow is drawn against map north, and turns into a real pointer once
 // you're walking (from the GPS course).
 
@@ -38,6 +38,7 @@ function onOrient(e) {
   heading = (h + (screen.orientation?.angle || 0) + 360) % 360;
   headingSrc = "compass";
   scheduleGoto();
+  scheduleHeading();
 }
 
 async function startCompass() {
@@ -57,6 +58,19 @@ function gotoOnFix(pos) {
   // Walking: the GPS course is a fine pointer when there's no compass
   if (headingSrc !== "compass" && h != null && !isNaN(h) && speed > 0.6) { heading = h; headingSrc = "course"; }
   scheduleGoto();
+  scheduleHeading();
+}
+
+// The cone on the blue dot showing which way you're facing (or walking)
+let headingFrame = 0;
+function scheduleHeading() {
+  if (headingFrame) return;
+  headingFrame = requestAnimationFrame(() => { headingFrame = 0; drawHeading(); });
+}
+function drawHeading() {
+  const show = lastFix && watchId != null && heading != null;
+  map.getSource("me-heading")?.setData(show ? { type: "FeatureCollection", features: [
+    { type: "Feature", properties: { heading }, geometry: { type: "Point", coordinates: lastFix } }] } : empty());
 }
 
 // ---------- Display ----------
