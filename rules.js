@@ -71,6 +71,15 @@ function hoursOn(iso, place) {
   return { open: toMin(row[0]) + adj, close: toMin(row[1]) + 12 * 60 + adj, base: row };
 }
 
+// Sunrise and sunset in local minutes, worked out on the phone (works offline)
+function sunOn(iso, place, pt) {
+  const t = SunCalc.getTimes(new Date(tzMidnight(iso, place.tz) + 12 * 3600000), pt[1], pt[0]);
+  if (isNaN(t.sunrise) || isNaN(t.sunset)) return null;
+  return { rise: partsIn(t.sunrise, place.tz).min, set: partsIn(t.sunset, place.tz).min };
+}
+// "8:03" with no AM/PM, for the hours box where space is tight
+function fmtShort(min) { return fmtMin(min).slice(0, -3); }
+
 function nowIn(tz) {
   const p = Object.fromEntries(new Intl.DateTimeFormat("en-CA", {
     timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23",
@@ -148,7 +157,7 @@ setInterval(renderChip, 60000);
 function renderChip() {
   if (!rules.data) return;
   const chip = $("hours-chip");
-  const place = placeAt(rulesPoint().pt);
+  const pt = rulesPoint().pt, place = placeAt(pt);
   if (!place) { chip.hidden = true; return; }
   const now = nowIn(place.tz), day = huntDay(place), live = liveStatus(place);
   chip.hidden = false;
@@ -157,13 +166,18 @@ function renderChip() {
     // Today's hunt is over: show tomorrow's
     const t = hoursOn(day, place);
     $("chip-main").textContent = `${fmtMin(t.open)} – ${fmtMin(t.close)}`;
-    $("chip-sub").textContent = `Tomorrow · opens in ${dur(1440 - now.min + t.open)} · ${place.county} Co.`;
+    const sun = sunOn(day, place, pt);
+    $("chip-sub").textContent = `Tomorrow · opens in ${dur(1440 - now.min + t.open)} · ` +
+      (sun ? `Sunrise ${fmtShort(sun.rise)}` : `${place.county} Co.`);
     renderChipWx(place, day, t);
     return;
   }
   const h = hoursOn(now.iso, place);
   $("chip-main").textContent = h ? `${fmtMin(h.open)} – ${fmtMin(h.close)}` : "Deer hours";
-  $("chip-sub").textContent = live ? `${live.text} · ${place.county} Co.` : `Not in the 2026 table · ${place.county} Co.`;
+  // Sunrise until the sun is up, then sunset, in place of the county (there's no room for both)
+  const sun = sunOn(now.iso, place, pt);
+  const tail = !sun ? `${place.county} Co.` : now.min < sun.rise ? `Sunrise ${fmtShort(sun.rise)}` : `Sunset ${fmtShort(sun.set)}`;
+  $("chip-sub").textContent = live ? `${live.text} · ${tail}` : `Not in the 2026 table · ${place.county} Co.`;
   renderChipWx();
 }
 
@@ -257,6 +271,12 @@ function renderRules() {
   big.children[0].append(el("span", "hours-label", "Opens"), el("strong", null, fmtMin(h.open)));
   big.children[1].append(el("span", "hours-label", "Closes"), el("strong", null, fmtMin(h.close)));
   glance.append(big);
+  const sun = sunOn(iso, place, pt);
+  if (sun) {
+    const sunLine = el("div", "glance-line");
+    sunLine.append(el("span", "glance-ico", "🌅"), `Sunrise ${fmtMin(sun.rise)} · Sunset ${fmtMin(sun.set)}`);
+    glance.append(sunLine);
+  }
   if (iso === day) {
     const live = liveStatus(place);
     if (live) {
@@ -288,13 +308,15 @@ function renderRules() {
   const adj = place.central ? `, minus 1 hour for Central Time` : "";
   hs.append(el("p", "fine", `${tzLabel}. Zone A table ${h.base[0]} a.m. / ${h.base[1]} p.m., plus ${place.offset} min for zone ${place.zone}${adj}.`));
   const week = el("table", "week");
-  week.innerHTML = `<thead><tr><th>Day</th><th>Opens</th><th>Closes</th></tr></thead>`;
+  week.innerHTML = `<thead><tr><th>Day</th><th>Opens</th><th>Sunrise</th><th>Sunset</th><th>Closes</th></tr></thead>`;
   const tb = el("tbody");
   for (let i = 1; i <= 7; i++) {
     const d = addDays(iso, i), x = hoursOn(d, place);
     if (!x) break;
     const tr = el("tr");
-    tr.append(el("td", null, fmtDay.format(new Date(d + "T00:00:00Z"))), el("td", null, fmtMin(x.open)), el("td", null, fmtMin(x.close)));
+    const sx = sunOn(d, place, pt);
+    tr.append(el("td", null, fmtDay.format(new Date(d + "T00:00:00Z"))), el("td", null, fmtMin(x.open)),
+      el("td", "sun", sx ? fmtMin(sx.rise) : "–"), el("td", "sun", sx ? fmtMin(sx.set) : "–"), el("td", null, fmtMin(x.close)));
     tr.onclick = () => { rules.date = d; renderRules(); };
     tb.append(tr);
   }
