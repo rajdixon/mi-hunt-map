@@ -31,9 +31,11 @@ const ROADS_REF = { url: `${ESRI}/Reference/World_Transportation/MapServer/tile/
 const PLACES_REF = { url: `${ESRI}/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}`, attr: "" };
 // fill: land-shading opacity that reads well on that background
 const BASEMAPS = {
+  // Tiles need a session from Google, so gmaps.js adds the layer once it has one
+  google: { label: "Google satellite", fill: 0.42, layers: [] },
   topo: { label: "Topo", fill: 0.32, layers: [
     { url: `${ESRI}/World_Topo_Map/MapServer/tile/{z}/{y}/{x}`, attr: "Esri, USGS, NOAA" }] },
-  sat: { label: "Satellite", fill: 0.42, layers: [
+  sat: { label: "Esri satellite", fill: 0.42, layers: [
     { url: `${ESRI}/World_Imagery/MapServer/tile/{z}/{y}/{x}`, attr: "Esri, Maxar, Earthstar Geographics" },
     ROADS_REF, PLACES_REF] },
   // Light shading so the terrain stays visible through it
@@ -57,7 +59,7 @@ const store = {
 
 const $ = id => document.getElementById(id);
 const data = {};          // id -> FeatureCollection with per-feature bbox
-let basemap = store.get("basemap", "topo");
+let basemap = store.get("basemap", "google");
 if (!BASEMAPS[basemap]) basemap = "topo";
 const visible = store.get("visible", Object.fromEntries(LAYERS.map(l => [l.id, true])));
 
@@ -96,12 +98,17 @@ document.body.classList.toggle("mouse", mouse);
 
 function setBasemap(name) {
   basemap = name; store.set("basemap", name);
+  // Esri imagery sits under Google: it shows with no signal (Google can't be
+  // kept offline) and before Google is set up. Its labels only without Google.
+  const google = name === "google", shown = google ? "sat" : name, gLayer = !!map.getLayer("bm-google");
   for (const k of Object.keys(BASEMAPS)) {
     BASEMAPS[k].layers.forEach((_, i) => {
       const id = `bm-${k}-${i}`;
-      if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", k === name ? "visible" : "none");
+      if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", k === shown && !(google && gLayer && i > 0) ? "visible" : "none");
     });
   }
+  if (gLayer) map.setLayoutProperty("bm-google", "visibility", google ? "visible" : "none");
+  if (typeof gmapsAttribution === "function") gmapsAttribution();
   document.querySelectorAll("[data-basemap]").forEach(b =>
     b.setAttribute("aria-checked", String(b.dataset.basemap === name)));
   // Land shading strength depends on the background
@@ -544,10 +551,13 @@ function saveAreas() {
 
 function mb(tiles) { return Math.max(1, Math.round(tiles * AVG_TILE_KB / 1024)); }
 
+// Google's terms don't allow keeping its tiles, so offline saves use Esri imagery instead
+function saveBasemap() { return basemap === "google" ? "sat" : basemap; }
+
 function renderEstimate() {
   if (saving) return;
-  const n = tileUrls(viewBounds(), basemap).length;
-  const label = BASEMAPS[basemap].label;
+  const n = tileUrls(viewBounds(), saveBasemap()).length;
+  const label = BASEMAPS[saveBasemap()].label + (basemap === "google" ? " (Google can't be saved)" : "");
   const box = $("save-estimate");
   if (n > SAVE_LIMIT) {
     box.className = "save-estimate warn";
@@ -603,7 +613,7 @@ addEventListener("online", renderEstimate);
 addEventListener("offline", renderEstimate);
 
 $("btn-save").addEventListener("click", async () => {
-  const bounds = viewBounds(), urls = tileUrls(bounds, basemap);
+  const bounds = viewBounds(), bm = saveBasemap(), urls = tileUrls(bounds, bm);
   if (urls.length > SAVE_LIMIT) return;
   try { await navigator.storage?.persist?.(); } catch {}
   const cache = await caches.open(OFFLINE_CACHE);
@@ -642,7 +652,7 @@ $("btn-save").addEventListener("click", async () => {
   const c = [(bounds[0] + bounds[2]) / 2, (bounds[1] + bounds[3]) / 2];
   const hit = hitsAt(c, false)[0];
   areas.unshift({
-    id: Date.now().toString(36), bounds, basemap,
+    id: Date.now().toString(36), bounds, basemap: bm,
     name: hit ? `Near ${hit.layer.title(hit.feature.properties || {})}` : `Area at ${c[1].toFixed(3)}, ${c[0].toFixed(3)}`,
     saved: urls.length - failed,
     date: new Date().toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }),

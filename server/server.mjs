@@ -399,6 +399,12 @@ async function api(req, res, email, url) {
       return res.end(body);
     } catch { return send(res, 404, { error: "Not found" }); }
   }
+  // Google satellite: the browser key lives in the env file, not the public repo.
+  // Phones start their own tile sessions with it (the key is locked to this site).
+  if (pathname === "/api/gmaps") {
+    if (!process.env.GOOGLE_MAPS_KEY || req.method !== "GET") return send(res, 404, { error: "Not found" });
+    return send(res, 200, { key: process.env.GOOGLE_MAPS_KEY });
+  }
   if (pathname === "/api/usage") {
     if (!OWNER || email !== OWNER || req.method !== "GET") return send(res, 404, { error: "Not found" });
     return send(res, 200, await usageStats());
