@@ -3,7 +3,7 @@
 // Land data: cache-first; a data refresh bumps VERSION to replace it.
 // Basemap tiles: areas saved from the Offline maps sheet (never trimmed),
 // plus tiles cached as you browse (up to MAX_TILES).
-const VERSION = "v38-2026-10-30";
+const VERSION = "data-202611022036";
 const SHELL = `shell-${VERSION}`;
 const TILES = "tiles-v1";
 const PHOTOS = "photos-v1";
