@@ -31,6 +31,15 @@ const ROADS_REF = { url: `${ESRI}/Reference/World_Transportation/MapServer/tile/
 const PLACES_REF = { url: `${ESRI}/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}`, attr: "" };
 // fill: land-shading opacity that reads well on that background
 const BASEMAPS = {
+  // USDA NAIP summer aerial photos (about 2 ft). USGS keeps ready-made tiles to
+  // zoom 16; closer in, the full-detail photo is cut on request, slow (10-20 s a
+  // tile), so it fills in over the zoom 16 picture
+  naip: { label: "Aerial (USDA)", fill: 0.42, layers: [
+    { url: `${USGS}/USGSImageryOnly/MapServer/tile/{z}/{y}/{x}`, attr: "USDA NAIP, USGS The National Map", maxzoom: 16 },
+    { url: "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPPlus/ImageServer/exportImage" +
+           "?bbox={bbox-epsg-3857}&bboxSR=3857&imageSR=3857&size=256,256&format=jpg&f=image",
+      attr: "", minzoom: 17, maxzoom: 18 },
+    ROADS_REF, PLACES_REF] },
   // Tiles need a session from Google, so gmaps.js adds the layer once it has one
   google: { label: "Google satellite", fill: 0.42, layers: [] },
   topo: { label: "Topo", fill: 0.32, layers: [
@@ -59,8 +68,10 @@ const store = {
 
 const $ = id => document.getElementById(id);
 const data = {};          // id -> FeatureCollection with per-feature bbox
-let basemap = store.get("basemap", "google");
-if (!BASEMAPS[basemap]) basemap = "topo";
+let basemap = store.get("basemap", "naip");
+if (!BASEMAPS[basemap]) basemap = "naip";
+// USDA aerial became the default: move everyone to it once
+if (!store.get("naip:default", false)) { store.set("naip:default", true); basemap = "naip"; }
 const visible = store.get("visible", Object.fromEntries(LAYERS.map(l => [l.id, true])));
 
 function link(url) {
@@ -120,8 +131,8 @@ map.on("load", async () => {
   for (const [k, b] of Object.entries(BASEMAPS)) {
     b.layers.forEach((t, i) => {
       const id = `bm-${k}-${i}`;
-      map.addSource(id, { type: "raster", tiles: [t.url], tileSize: 256, maxzoom: t.maxzoom || 19, attribution: t.attr });
-      map.addLayer({ id, type: "raster", source: id, layout: { visibility: "none" } });
+      map.addSource(id, { type: "raster", tiles: [t.url], tileSize: 256, minzoom: t.minzoom || 0, maxzoom: t.maxzoom || 19, attribution: t.attr });
+      map.addLayer({ id, type: "raster", source: id, minzoom: t.minzoom || 0, layout: { visibility: "none" } });
     });
   }
 
@@ -497,7 +508,7 @@ function tileUrls(bounds, basemapName) {
     const x0 = lng2x(w, z), x1 = lng2x(e, z), y0 = lat2y(n, z), y1 = lat2y(s, z);
     for (let x = x0; x <= x1; x++) for (let y = y0; y <= y1; y++)
       for (const t of BASEMAPS[basemapName].layers)
-        if (z <= (t.maxzoom || 19)) urls.push(tileUrl(t.url, z, x, y));
+        if (z >= (t.minzoom || 0) && z <= (t.maxzoom || 19)) urls.push(tileUrl(t.url, z, x, y));
   }
   return urls;
 }

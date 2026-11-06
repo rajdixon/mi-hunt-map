@@ -3,13 +3,13 @@
 // Land data: cache-first; a data refresh bumps VERSION to replace it.
 // Basemap tiles: areas saved from the Offline maps sheet (never trimmed),
 // plus tiles cached as you browse (up to MAX_TILES).
-const VERSION = "data-202611092101";
+const VERSION = "v39-2026-11-06";
 const SHELL = `shell-${VERSION}`;
 const TILES = "tiles-v1";
 const PHOTOS = "photos-v1";
 const PRIVATE = "private-v1";
 const MAX_TILES = 4000;
-const TILE_HOSTS = ["server.arcgisonline.com", "basemap.nationalmap.gov", "elevation.nationalmap.gov", "s3.amazonaws.com"];
+const TILE_HOSTS = ["server.arcgisonline.com", "basemap.nationalmap.gov", "elevation.nationalmap.gov", "imagery.nationalmap.gov", "s3.amazonaws.com"];
 
 // LiDAR tiles are requested by bounding box; round it so a saved tile and
 // the map's request for the same tile share one cache key (same as app.js)

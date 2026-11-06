@@ -188,7 +188,7 @@ def _(b):
 @shot("view3d")
 def _(b):
     ctx, pg = open_app(b, locate=False)
-    pg.evaluate("setBasemap('sat'); map.jumpTo({ center: [-84.95, 45.045], zoom: 13.2, bearing: 0 })")
+    pg.evaluate("setBasemap('naip'); map.jumpTo({ center: [-84.95, 45.045], zoom: 13.2, bearing: 0 })")
     pg.click("#btn-3d")
     pg.wait_for_timeout(1500)
     pg.evaluate("map.easeTo({ bearing: 200, pitch: 72, duration: 0 })")
@@ -206,6 +206,16 @@ def _(b):
     pg.wait_for_selector(".act-bars", timeout=20000)
     pg.evaluate("document.querySelector('.act').scrollIntoView({ block: 'start' }); document.querySelector('.sheet-body, #sheet-rules .body')?.scrollBy?.(0, -20)")
     save(pg, "outlook")
+    ctx.close()
+
+
+@shot("layers")
+def _(b):
+    ctx, pg = open_app(b)
+    pg.click("#btn-layers")
+    pg.wait_for_timeout(1200)
+    pg.evaluate("document.getElementById('basemap-list').scrollIntoView({ block: 'center' })")
+    save(pg, "layers")
     ctx.close()
 
 

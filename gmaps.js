@@ -1,6 +1,6 @@
 "use strict";
 // Google satellite (with Google's roads and place names) from the Map Tiles
-// API. The server hands signed-in phones the key (/api/gmaps); each phone
+// API. Its button stays hidden until a tile session works. The server hands signed-in phones the key (/api/gmaps); each phone
 // starts its own tile session, good for about two weeks. Google's terms don't
 // allow keeping its tiles, so they're never cached: with no signal the Esri
 // imagery under it shows instead (app.js setBasemap), and offline saves use Esri.
@@ -28,8 +28,8 @@ function gmapsLayer() {
   // Just above the other backgrounds, under the land and everything else
   const above = map.getStyle().layers.find(l => !l.id.startsWith("bm-"));
   map.addLayer({ id: "bm-google", type: "raster", source: "bm-google", layout: { visibility: "none" } }, above?.id);
-  // Google satellite became the default: move everyone to it once
-  if (!store.get("gmaps:default", false)) { store.set("gmaps:default", true); basemap = "google"; }
+  document.querySelector('[data-basemap="google"]').hidden = false;
+  if (wantGoogle) { wantGoogle = false; basemap = "google"; }
   setBasemap(basemap);
 }
 
@@ -37,13 +37,7 @@ async function gmapsStart() {
   let key = gmaps?.key;
   try {
     const res = await fetch("/api/gmaps", { redirect: "manual", credentials: "same-origin" });
-    if (res.status === 404) {
-      // Not set up on the server: no Google option
-      store.set("gmaps", gmaps = null);
-      document.querySelector('[data-basemap="google"]')?.remove();
-      if (basemap === "google") setBasemap("sat");
-      return;
-    }
+    if (res.status === 404) { store.set("gmaps", gmaps = null); return; }   // not set up on the server
     if (res.ok) key = (await res.json()).key;
   } catch {}   // no signal: use the saved key and session
   if (!key) return;
@@ -81,4 +75,8 @@ function gmapsAttribution() {
 }
 map.on("moveend", gmapsAttribution);
 
+document.querySelector('[data-basemap="google"]').hidden = true;
+// Picked last time: show the USDA aerial until Google's layer is back
+let wantGoogle = basemap === "google";
+if (wantGoogle) basemap = "naip";
 if (map.getLayer("bm-topo-0")) gmapsStart(); else map.once("load", gmapsStart);

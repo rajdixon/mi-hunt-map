@@ -19,7 +19,9 @@ Backgrounds: Esri Topo, Esri Satellite, LiDAR terrain (USGS 3DEP bare-earth hill
 
 Overlays are queried live from DNR ArcGIS services for the area on screen, so they need a signal: forest stand cover type (zoom 13+), DNR roads (11+), DNR trails with hunter walking trails and temporary closures (10+), DNR parking (10+), PLSS sections (12+) and townships (8+). DMU boundaries come from `data/dmu.geojson` and work offline.
 
-**Google satellite** (`gmaps.js`): the default background, from Google's Map Tiles API (satellite with the roadmap layer). Set `GOOGLE_MAPS_KEY` in `~/.config/mi-hunt.env` on webserver02 to a browser key restricted to the Map Tiles API and `https://hunt.tradersedges.net/*`; `/api/gmaps` hands it to signed-in phones, which each start their own tile session. Without the key the option is hidden. Google's terms don't allow keeping tiles, so they're never cached: Esri imagery sits underneath for no-signal use, and offline saves on Google save Esri.
+**Aerial (USDA)**: the default background, USDA NAIP summer aerial photos. Zoom 16 and out come from USGS's ready-made tiles (`USGSImageryOnly`, fast); zoom 17-18 are cut on request from `USGSNAIPPlus` (10-20 s a tile), so they fill in over the overzoomed z16 picture. Offline saves stop at z16, so they use only the fast tiles.
+
+**Google satellite** (`gmaps.js`): an optional background (its button shows only once a tile session works), from Google's Map Tiles API (satellite with the roadmap layer). Set `GOOGLE_MAPS_KEY` in `~/.config/mi-hunt.env` on webserver02 to a browser key restricted to the Map Tiles API and `https://hunt.tradersedges.net/*`; `/api/gmaps` hands it to signed-in phones, which each start their own tile session. Without the key the option is hidden. Google's terms don't allow keeping tiles, so they're never cached: Esri imagery sits underneath for no-signal use, and offline saves on Google save Esri.
 
 **Weather radar** (`radar.js`): NWS composite reflectivity from the [Iowa Environmental Mesonet](https://mesonet.agron.iastate.edu/ogc/) tile mirror, refreshed every 5 minutes, with a loop of the last 50 minutes. Never cached.
 
