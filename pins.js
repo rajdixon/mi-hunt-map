@@ -155,7 +155,6 @@ async function renderPinList() {
 $("btn-pins").addEventListener("click", () => {
   if (!$("sheet-pins").hidden) return closeSheet("sheet-pins");
   renderPinList();
-  renderWindCard();
   openSheet("sheet-pins");
 });
 $("btn-pin-gps").addEventListener("click", () => lastFix && openPinEditor({ lng: lastFix[0], lat: lastFix[1] }));

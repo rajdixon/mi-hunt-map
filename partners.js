@@ -224,7 +224,7 @@ function drawWhere() {
     if (!m) {
       const e = el("button", "partner-here");
       e.append(el("span", "ph-dot", initial(w.name)), el("span", "ph-label"));
-      e.addEventListener("click", ev => { ev.stopPropagation(); renderPartnersCard(); openPinsSheet(); });
+      e.addEventListener("click", ev => { ev.stopPropagation(); renderPartnersCard(); openMoreSheet(); });
       m = new maplibregl.Marker({ element: e, anchor: "center" }).setLngLat([w.lng, w.lat]).addTo(map);
       hereMarkers.set(w.key, m);
     }
@@ -244,7 +244,7 @@ async function whereCall(method, body) {
     if (!res.ok) return;
     partnerWhere = (await res.json()).partners || [];
     drawWhere();
-    if (!$("sheet-pins").hidden) renderPartnersCard();
+    if (!$("sheet-more").hidden) renderPartnersCard();
   } catch {}
 }
 
@@ -276,7 +276,7 @@ function setWhereShare(on) {
   renderPartnersCard();
 }
 
-// ---------- Partners card (top of the Pins sheet) ----------
+// ---------- Partners card (top of the More sheet) ----------
 function renderPartnersCard() {
   const box = $("partners-card");
   if (!box) return;
@@ -322,7 +322,7 @@ function renderPartnersCard() {
       const go = el("button", "btn-ghost small-btn", "Go to");
       go.onclick = () => startGoto({ name: p.name, lng: w.lng, lat: w.lat });
       const see = el("button", "btn-ghost small-btn", "Show");
-      see.onclick = () => { closeSheet("sheet-pins"); stopFollowing(); map.flyTo({ center: [w.lng, w.lat], zoom: Math.max(map.getZoom(), 15) }); };
+      see.onclick = () => { closeSheet("sheet-more"); stopFollowing(); map.flyTo({ center: [w.lng, w.lat], zoom: Math.max(map.getZoom(), 15) }); };
       const acts = el("div", "partner-acts"); acts.append(see, go);
       li.append(acts);
     }
@@ -340,7 +340,7 @@ function renderPartnersCard() {
   box.append(nameField,
     el("p", "fine", "Partners see only the pins, tracks, lines and areas you share with them, with everyone or just the people you pick. Phones only send location while the app is open on screen."));
 }
-function openPinsSheet() { if ($("sheet-pins").hidden) $("btn-pins").click(); }
+function openMoreSheet() { if ($("sheet-more").hidden) $("tab-more").click(); }
 
 document.addEventListener("land-ready", () => {
   map.addSource("partner-tracks", { type: "geojson", data: empty() });
@@ -353,6 +353,6 @@ document.addEventListener("land-ready", () => {
                  paint: { "line-color": ["get", "color"], "line-width": 2.5, "line-dasharray": [2, 1.2] } }, "sel-line");
   drawPartners();
 });
-$("btn-pins").addEventListener("click", renderPartnersCard);
+$("tab-more").addEventListener("click", renderPartnersCard);
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && hasPartners()) pollWhere(); });
 setInterval(drawWhere, 60000);

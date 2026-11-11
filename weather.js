@@ -198,7 +198,7 @@ function ageText(fc) {
   return m < 2 ? "just updated" : m < 60 ? `updated ${m} min ago` : `updated ${Math.round(m / 60)} hr ago`;
 }
 
-// Wind card at the top of the pins sheet
+// Wind card at the top of the hours and weather sheet
 async function renderWindCard() {
   const box = $("wind-card");
   const { pt, source } = rulesPoint();
@@ -220,7 +220,5 @@ async function renderWindCard() {
     c.append(el("span", "wind-temp", `${p.temp}°`));
     strip.append(c);
   }
-  const more = el("button", "more-btn", "7-day forecast and moon ›");
-  more.addEventListener("click", () => { closeSheet("sheet-pins"); rules.date = null; renderRules(); openSheet("sheet-rules"); });
-  box.append(head, strip, more, el("div", "fine wind-meta", `NWS forecast for ${source} · ${ageText(fc)}${fc.stale ? " (no signal)" : ""}`));
+  box.append(head, strip, el("div", "fine wind-meta", `NWS forecast for ${source} · ${ageText(fc)}${fc.stale ? " (no signal)" : ""}`));
 }

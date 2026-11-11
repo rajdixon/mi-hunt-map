@@ -17,6 +17,9 @@ function set3d(on, animate = true) {
   $("btn-3d").setAttribute("aria-pressed", String(on));
   $("btn-3d").setAttribute("aria-label", on ? "Turn off 3D view" : "3D view");
   $("tilt-pad").hidden = !on;
+  // The Tools tile turns it on; the 3D button bottom left shows only while it's on, to turn it off
+  $("tool-3d").setAttribute("aria-pressed", String(on));
+  $("tool-3d-note").textContent = on ? "On · tap to turn off" : "Tilt over the hills";
   if (on) {
     addDem();
     map.setTerrain({ source: "dem", exaggeration: hills });

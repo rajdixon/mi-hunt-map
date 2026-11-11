@@ -64,7 +64,11 @@ def seed(data_dir):
            "pts": [off(320, 260), off(560, 300), off(600, 520), off(380, 560), off(280, 420), off(320, 260)]}
     api("sync", {"pins": pins, "shapes": [route, bed], "tracks": []})
     # Partners share a few things
-    api("sync", {"pins": [{**pin("d1", "Oak flat", "stand", -420, 220, winds=["E"]), "shared": True}]}, user=DAVE)
+    dlog = [{"id": f"dl{i}", "kind": k, "t": time.strftime("%Y-%m-%dT%H:%M", time.localtime(t / 1000 - d * 86400)), "text": x, "wind": w}
+            for i, (k, d, x, w) in enumerate([("harvest", 2, "Doe, 40 yd, ran 60 yd", "E 6 mph, 35°F"),
+                                              ("sighting", 4, "8-point cruising the oak edge at 4:50", "E 8 mph, 41°F")])]
+    api("sync", {"pins": [{**pin("d1", "Oak flat", "stand", -420, 220, winds=["E", "NE"], log=dlog, notes="Climb from the south side"),
+                           "shared": True, "shareWinds": True, "shareLog": True, "shareNotes": True}]}, user=DAVE)
     api("sync", {"pins": [{**pin("j1", "Jen's blind", "blind", 420, -260), "shared": True}]}, user=JEN)
     api("where", {"lng": off(-150, 420)[0], "lat": off(-150, 420)[1], "acc": 6}, user=DAVE)
     # The bell: a typical evening's notes (after the share notes above are written)
@@ -103,6 +107,24 @@ def open_app(browser, size=PHONE, locate=True):
         pg.evaluate("""() => { const e = new Event("deviceorientation"); e.webkitCompassHeading = 50;
             dispatchEvent(e); }""")
     return ctx, pg
+
+
+def open_overlays(pg):
+    pg.evaluate("document.querySelector('.layer-group[data-group=overlays]').open = true")
+
+
+def tap(pg, lnglat):
+    """Click the map at a spot"""
+    x, y = pg.evaluate(f"(() => {{ const p = map.project({json.dumps(lnglat)}); return [p.x, p.y]; }})()")
+    pg.mouse.click(x, y)
+    pg.wait_for_timeout(250)
+
+
+def open_pin(pg, name):
+    pg.click("#btn-pins")
+    pg.wait_for_timeout(600)
+    pg.locator("#pin-list .pin-row", has_text=name).click()
+    pg.wait_for_timeout(1000)
 
 
 def save(pg, name, **kw):
@@ -147,13 +169,13 @@ def _(b):
 @shot("partners")
 def _(b):
     ctx, pg = open_app(b)
-    pg.click("#btn-pins")
+    pg.click("#tab-more")
     pg.wait_for_timeout(600)
     pg.check("#partners-card input[type=checkbox]")
     pg.wait_for_timeout(1200)
     pg.check("#where-who-some")
     pg.check(f"#where-p-{key(DAVE)}")
-    pg.evaluate("document.querySelector('#sheet-pins').scrollTop = 0")
+    pg.evaluate("document.querySelector('#sheet-more').scrollTop = 0")
     save(pg, "partners")
     ctx.close()
 
@@ -163,6 +185,7 @@ def _(b):
     ctx, pg = open_app(b)
     pg.evaluate("map.jumpTo({ zoom: 14.2 })")
     pg.click("#btn-layers")
+    open_overlays(pg)
     pg.check("#ov-stands")
     pg.wait_for_timeout(500)
     pg.locator("#cover-pick li", has_text="Oak").locator(".cover-btn").click()
@@ -177,6 +200,7 @@ def _(b):
     ctx, pg = open_app(b, locate=False)
     pg.evaluate(f"map.jumpTo({{ center: {json.dumps(LOGGING)}, zoom: 14 }})")
     pg.click("#btn-layers")
+    open_overlays(pg)
     for g in ("cuts", "sales", "plans"):
         pg.check(f"#ov-{g}")
     pg.evaluate("closeSheet('sheet-layers')")
@@ -189,7 +213,8 @@ def _(b):
 def _(b):
     ctx, pg = open_app(b, locate=False)
     pg.evaluate("setBasemap('naip'); map.jumpTo({ center: [-84.95, 45.045], zoom: 13.2, bearing: 0 })")
-    pg.click("#btn-3d")
+    pg.click("#tab-tools")
+    pg.click("#tool-3d")
     pg.wait_for_timeout(1500)
     pg.evaluate("map.easeTo({ bearing: 200, pitch: 72, duration: 0 })")
     pg.wait_for_timeout(8000)   # elevation and imagery tiles
@@ -214,7 +239,6 @@ def _(b):
     ctx, pg = open_app(b)
     pg.click("#btn-layers")
     pg.wait_for_timeout(1200)
-    pg.evaluate("document.getElementById('basemap-list').scrollIntoView({ block: 'center' })")
     save(pg, "layers")
     ctx.close()
 
@@ -239,6 +263,181 @@ def _(b):
     pg.click("#btn-pins")
     pg.mouse.move(900, 420)
     save(pg, "desktop")
+    ctx.close()
+
+
+@shot("tools")
+def _(b):
+    ctx, pg = open_app(b)
+    pg.click("#tab-tools")
+    save(pg, "tools")
+    ctx.close()
+
+
+@shot("pins-list")
+def _(b):
+    ctx, pg = open_app(b)
+    pg.click("#btn-pins")
+    pg.wait_for_timeout(800)
+    save(pg, "pins-list")
+    ctx.close()
+
+
+@shot("pin-edit")
+def _(b):
+    ctx, pg = open_app(b)
+    open_pin(pg, "Ridge stand")
+    save(pg, "pin-edit")
+    ctx.close()
+
+
+@shot("patterns")
+def _(b):
+    ctx, pg = open_app(b)
+    open_pin(pg, "Ridge stand")
+    pg.evaluate("document.getElementById('pin-log').scrollIntoView({ block: 'start' })")
+    save(pg, "patterns")
+    ctx.close()
+
+
+@shot("goto")
+def _(b):
+    ctx, pg = open_app(b)
+    open_pin(pg, "Ridge stand")
+    pg.click("#btn-pin-goto")
+    pg.wait_for_timeout(1500)
+    save(pg, "goto")
+    ctx.close()
+
+
+@shot("measure")
+def _(b):
+    ctx, pg = open_app(b)
+    pg.click("#tab-tools")
+    pg.click("#btn-measure")
+    for p in (off(-300, -250), off(-40, 260), off(280, 120), off(180, -260)):
+        tap(pg, p)
+    save(pg, "measure")
+    ctx.close()
+
+
+@shot("draw")
+def _(b):
+    ctx, pg = open_app(b)
+    pg.click("#tab-tools")
+    pg.click("#btn-draw")
+    pg.click(".draw-mode[data-kind=area]")
+    for p in (off(-320, 60), off(-120, 230), off(40, 40), off(-80, -170), off(-300, -120)):
+        tap(pg, p)
+    save(pg, "draw-area")
+    pg.click("#btn-draw-done")
+    pg.wait_for_timeout(600)
+    pg.fill("#shape-name", "Thicket")
+    save(pg, "draw-name")
+    ctx.close()
+
+
+@shot("tracks")
+def _(b):
+    ctx, pg = open_app(b)
+    # A walk in from parking last Saturday, then start recording today's
+    pg.evaluate(f"""() => {{ const pts = {json.dumps([off(-380, -380), off(-300, -280), off(-180, -150), off(-60, -60), off(80, 90), off(160, 180)])};
+      const t0 = Date.now() - 4 * 86400000;
+      tracks.push({{ id: "t1", name: "Walk in, Sat", start: t0, end: t0 + 35 * 60000, points: pts.map((p, i) => [p[0], p[1], t0 + i * 7 * 60000]),
+        dist: trackDist(pts.map(p => [p[0], p[1], 0])) }});
+      shownTracks.add("t1"); saveTracks(); drawSavedTracks(); }}""")
+    pg.click("#tab-tools")
+    pg.click("#btn-tracks")
+    pg.click("#btn-track-start")
+    pg.wait_for_timeout(1500)
+    save(pg, "tracks")
+    ctx.close()
+
+
+@shot("radar")
+def _(b):
+    ctx, pg = open_app(b, locate=False)
+    pg.click("#tab-tools")
+    pg.check("#radar-on")
+    pg.evaluate("closeSheet('sheet-tools'); map.jumpTo({ center: [-85.4, 44.2], zoom: 6.2 })")
+    pg.wait_for_timeout(6000)   # radar tiles
+    save(pg, "radar")
+    ctx.close()
+
+
+@shot("scent")
+def _(b):
+    ctx, pg = open_app(b)
+    pg.click("#tab-tools")
+    pg.check("#scent-on")
+    # Whatever today's weather: a SW wind, so the cone drifts over the trail cam
+    pg.evaluate("""() => { const real = periodAt; periodAt = (...a) => { const p = real(...a); return p && { ...p, dir: "SW", mph: 7 }; };
+      closeSheet('sheet-tools'); drawScent(); }""")
+    pg.wait_for_timeout(3000)   # the forecast
+    save(pg, "scent")
+    ctx.close()
+
+
+@shot("offline")
+def _(b):
+    ctx, pg = open_app(b)
+    pg.click("#tab-tools")
+    pg.click("#btn-offline")
+    pg.wait_for_timeout(1500)
+    save(pg, "offline")
+    ctx.close()
+
+
+@shot("search")
+def _(b):
+    ctx, pg = open_app(b)
+    pg.click("#btn-search")
+    pg.fill("#search-input", "Kalkaska")
+    pg.wait_for_timeout(800)
+    save(pg, "search")
+    ctx.close()
+
+
+@shot("settings")
+def _(b):
+    ctx, pg = open_app(b)
+    pg.click("#tab-more")
+    pg.click("#btn-settings")
+    pg.wait_for_timeout(800)
+    save(pg, "settings")
+    ctx.close()
+
+
+@shot("night")
+def _(b):
+    ctx, pg = open_app(b)
+    pg.evaluate("setSetting('night', true)")
+    pg.wait_for_timeout(800)
+    save(pg, "night")
+    ctx.close()
+
+
+@shot("landlocked")
+def _(b):
+    ctx, pg = open_app(b, locate=False)
+    pg.evaluate("map.jumpTo({ center: [-86.3037, 41.9071], zoom: 15.3 })")
+    pg.click("#btn-layers")
+    open_overlays(pg)
+    pg.check("#ov-landlocked")
+    pg.evaluate("closeSheet('sheet-layers')")
+    pg.wait_for_timeout(2500)
+    tap(pg, [-86.3037, 41.9071])
+    pg.wait_for_timeout(1200)
+    save(pg, "landlocked")
+    ctx.close()
+
+
+@shot("partner-view")
+def _(b):
+    ctx, pg = open_app(b)
+    pg.evaluate("(() => { const d = group.partners.find(p => p.name === 'Dave'); openPartnerPin(d.pins.find(p => p.id === 'd1'), d); })()")
+    pg.wait_for_timeout(800)
+    save(pg, "partner-view")
     ctx.close()
 
 

@@ -10,14 +10,14 @@ const FEATURES = {
   "btn-locate": "gps", "btn-pins": "pins", "btn-tracks": "tracks", "btn-track-start": "track-record",
   "btn-pin-goto": "goto", "pin-directions": "drive", "btn-pin-share": "share-link", "btn-photo-add": "photos",
   "btn-log-save": "hunt-log", "radar-on": "radar", "scent-on": "scent", "btn-backup-export": "backup",
-  "btn-settings": "settings", "btn-notes": "notifications",
+  "btn-settings": "settings", "btn-notes": "notifications", "tool-3d": "3d", "tab-tools": "tools", "tab-more": "more",
 };
 const FEATURE_NAMES = {
   search: "Search", measure: "Measure", draw: "Lines & areas", outlook: "Hours & outlook", layers: "Layers",
   offline: "Offline maps", "offline-save": "Saved offline areas", gps: "My location", pins: "My pins", tracks: "Tracks",
   "track-record": "Recorded tracks", goto: "Go to", drive: "Driving directions", "share-link": "Shared pin links",
   photos: "Trail cam photos", "hunt-log": "Hunt log entries", radar: "Radar", scent: "Scent cones",
-  backup: "Backups", settings: "Settings", notifications: "Notifications", "pin-save": "Pins saved",
+  backup: "Backups", settings: "Settings", "3d": "3D view", tools: "Tools tab", more: "More tab", notifications: "Notifications", "pin-save": "Pins saved",
 };
 let feats = {}, onScreenSince = document.visibilityState === "visible" ? Date.now() : 0, lastOpen = 0;
 const countFeature = k => { feats[k] = (feats[k] || 0) + 1; };

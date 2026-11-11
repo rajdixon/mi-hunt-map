@@ -20,7 +20,7 @@ Promise.all([
   });
   Object.assign(rules, { data, counties, dmus });
   refreshRules();
-}).catch(() => { $("hours-chip").hidden = true; });
+}).catch(() => { $("hours-chip").classList.add("no-hours"); });
 
 // ---------- Lookups ----------
 function featureAt(fc, pt) {
@@ -158,9 +158,10 @@ function renderChip() {
   if (!rules.data) return;
   const chip = $("hours-chip");
   const pt = rulesPoint().pt, place = placeAt(pt);
-  if (!place) { chip.hidden = true; return; }
+  // Outside Michigan the strip still shows the land status, just no hours
+  chip.classList.toggle("no-hours", !place);
+  if (!place) return;
   const now = nowIn(place.tz), day = huntDay(place), live = liveStatus(place);
-  chip.hidden = false;
   chip.dataset.state = live ? live.state : "off";
   if (day !== now.iso) {
     // Today's hunt is over: show tomorrow's
@@ -395,6 +396,7 @@ $("hours-chip").addEventListener("click", () => {
   if (!$("sheet-rules").hidden) { closeSheet("sheet-rules"); document.body.classList.remove("show-crosshair"); return; }
   rules.date = null;
   renderRules();
+  if (typeof renderWindCard === "function") renderWindCard();
   openSheet("sheet-rules");
 });
 document.querySelector('[data-close="sheet-rules"]').addEventListener("click", () =>

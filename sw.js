@@ -3,7 +3,7 @@
 // Land data: cache-first; a data refresh bumps VERSION to replace it.
 // Basemap tiles: areas saved from the Offline maps sheet (never trimmed),
 // plus tiles cached as you browse (up to MAX_TILES).
-const VERSION = "v39-2026-11-06";
+const VERSION = "v40-2026-11-11";
 const SHELL = `shell-${VERSION}`;
 const TILES = "tiles-v1";
 const PHOTOS = "photos-v1";
@@ -19,7 +19,7 @@ function tileKey(url) {
 }
 
 const SHELL_FILES = [
-  "./", "index.html", "style.css", "app.js", "gmaps.js", "rules.js", "weather.js", "outlook.js", "activity.js", "vendor/suncalc.js", "pins.js", "tracks.js", "overlays.js", "view3d.js", "search.js", "scent.js", "stats.js", "measure.js", "radar.js", "goto.js", "draw.js", "settings.js", "sync.js", "usage.js", "notes.js", "photos.js", "partners.js", "pinfilter.js", "private.js", "manifest.webmanifest", "icon.svg", "icon-192.png",
+  "./", "index.html", "style.css", "app.js", "gmaps.js", "rules.js", "weather.js", "outlook.js", "activity.js", "vendor/suncalc.js", "pins.js", "tracks.js", "overlays.js", "view3d.js", "search.js", "scent.js", "stats.js", "measure.js", "radar.js", "goto.js", "draw.js", "settings.js", "sync.js", "usage.js", "notes.js", "photos.js", "partners.js", "pinfilter.js", "private.js", "tabs.js", "img/basemaps/naip.jpg", "img/basemaps/google.jpg", "img/basemaps/topo.jpg", "img/basemaps/sat.jpg", "img/basemaps/lidar.jpg", "img/basemaps/usgs.jpg", "img/basemaps/usgsImg.jpg", "manifest.webmanifest", "icon.svg", "icon-192.png",
   "data/meta.json", "data/state_forest.geojson", "data/state_wildlife.geojson", "data/state_parks.geojson",
   "data/hap.geojson", "data/commercial_forest.geojson", "data/national_forest.geojson",
   "data/counties.geojson", "data/landlocked.geojson", "data/dmu.geojson", "data/deer_rules_2026.json",

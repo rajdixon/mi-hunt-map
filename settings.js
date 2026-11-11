@@ -1,5 +1,5 @@
 "use strict";
-// Settings (gear in the top bar): text size, distance units, night mode, keep
+// Settings (More tab): text size, distance units, night mode, keep
 // the screen on, battery saver, map labels and go-to walking pace. Kept on
 // this device only. The owner also gets a link to everyone's usage.
 
@@ -28,7 +28,8 @@ const walkMps = () => settings.pace * 1609.34 / 3600;
 
 // Redraw open lists so distances show in the new units
 function refreshDistances() {
-  if (!$("sheet-pins").hidden) { renderPinList(); renderShapeList(); if (typeof renderPartnersCard === "function") renderPartnersCard(); }
+  if (!$("sheet-pins").hidden) { renderPinList(); renderShapeList(); }
+  if (!$("sheet-more").hidden && typeof renderPartnersCard === "function") renderPartnersCard();
   if (!$("sheet-tracks").hidden) renderTrackSheet();
   if (typeof measure !== "undefined" && measure) renderMeasureBar();
   if (typeof drawing !== "undefined" && drawing) renderDrawBar();
@@ -108,7 +109,7 @@ function renderSettings() {
   box.append(about);
 }
 
-const APP_VERSION = "2026-11-06";
+const APP_VERSION = "2026-11-11";
 $("btn-settings").addEventListener("click", () => {
   if (!$("sheet-settings").hidden) return closeSheet("sheet-settings");
   renderSettings();

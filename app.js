@@ -411,7 +411,10 @@ document.querySelectorAll(".sheet").forEach(s => sheetObserver.observe(s));
 function liftButtons() {
   const open = [...document.querySelectorAll(".sheet")].find(s => !s.hidden);
   const docked = open && innerWidth < 700;
-  const h = docked ? open.offsetHeight : 0;
+  // Phones: the tab bar takes the bottom; sheets sit on top of it
+  const tabH = innerWidth < 700 ? $("tabbar").offsetHeight : 0;
+  document.documentElement.style.setProperty("--tab-h", tabH + "px");
+  const h = (docked ? open.offsetHeight : 0) + tabH;
   // Wider screens: the sheet is a side panel on the left
   // (layout box, not getBoundingClientRect: the slide-in animation would skew it; zoom scales both)
   const z = +getComputedStyle(document.documentElement).getPropertyValue("--ui-zoom") || 1;
@@ -421,6 +424,7 @@ function liftButtons() {
   // Keep the map's center in the visible area beside or above the sheet (the rules panel reads it)
   const p = map.getPadding();
   if (p.bottom !== h || p.left !== w) map.setPadding({ top: 0, left: w, right: 0, bottom: h });
+  if (typeof markTab === "function") markTab(open);
 }
 addEventListener("resize", liftButtons);
 
@@ -461,7 +465,11 @@ for (const [k, b] of Object.entries(BASEMAPS)) {
   const btn = document.createElement("button");
   btn.dataset.basemap = k; btn.setAttribute("role", "radio");
   btn.setAttribute("aria-checked", String(k === basemap));
-  btn.textContent = b.label;
+  const pic = document.createElement("img");
+  pic.src = `img/basemaps/${k}.jpg`; pic.alt = ""; pic.loading = "lazy";
+  const name = document.createElement("span");
+  name.textContent = b.label;
+  btn.append(pic, name);
   btn.addEventListener("click", () => setBasemap(k));
   $("basemap-list").append(btn);
 }
