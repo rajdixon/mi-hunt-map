@@ -97,7 +97,8 @@ function renderSettings() {
   };
   const acts = el("div", "save-actions"); acts.append(guide, update);
   about.append(el("h3", "sheet-sub", "About"), acts,
-    el("p", "fine", `Version ${APP_VERSION}. Settings are saved on this device only.`));
+    el("p", "fine", `Version ${APP_VERSION}. Settings are saved on this device only.`),
+    el("p", "fine mono", screenText()));
   if (typeof isOwner === "function" && isOwner()) {
     const owner = el("div", "settings-about");
     const btn = el("button", "btn-primary", "Usage stats");
@@ -109,7 +110,18 @@ function renderSettings() {
   box.append(about);
 }
 
-const APP_VERSION = "2026-11-11";
+// Screen and safe-area sizes, for sorting out layout trouble on a phone
+function screenText() {
+  const css = getComputedStyle(document.documentElement), v = n => css.getPropertyValue(n).trim() || "0px";
+  const probe = el("div"); probe.style.cssText = "position:fixed;top:env(safe-area-inset-top);bottom:env(safe-area-inset-bottom)";
+  document.body.append(probe);
+  const top = parseFloat(getComputedStyle(probe).top) || 0, bot = parseFloat(getComputedStyle(probe).bottom) || 0;
+  probe.remove();
+  return `Screen ${screen.width}×${screen.height} · view ${innerWidth}×${innerHeight} · safe ${top}/${bot} · gap ${v("--ios-gap")}` +
+    (navigator.standalone ? " · home screen" : "");
+}
+
+const APP_VERSION = "2026-11-11b";
 $("btn-settings").addEventListener("click", () => {
   if (!$("sheet-settings").hidden) return closeSheet("sheet-settings");
   renderSettings();

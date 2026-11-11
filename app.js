@@ -408,13 +408,27 @@ function circle(lng, lat, meters) {
 // Buttons ride above whichever sheet is open so they never get covered
 const sheetObserver = new ResizeObserver(liftButtons);
 document.querySelectorAll(".sheet").forEach(s => sheetObserver.observe(s));
+// iPhone home-screen app bug: the page's viewport comes out shorter than the
+// screen (by about the status bar's height) but starts at the top, leaving an
+// undrawn strip along the bottom. Measure it, so the map and the tab bar can
+// reach down into it (--ios-gap). Zero everywhere else.
+function iosGap() {
+  if (navigator.standalone !== true) return 0;
+  const full = innerWidth < innerHeight ? screen.height : screen.width;
+  const gap = full - innerHeight;
+  return gap > 0 && gap < 120 ? gap : 0;
+}
 function liftButtons() {
   const open = [...document.querySelectorAll(".sheet")].find(s => !s.hidden);
   const docked = open && innerWidth < 700;
-  // Phones: the tab bar takes the bottom; sheets sit on top of it
-  const tabH = innerWidth < 700 ? $("tabbar").offsetHeight : 0;
+  const gap = iosGap();
+  document.documentElement.style.setProperty("--ios-gap", gap + "px");
+  // Phones: the tab bar takes the bottom; sheets sit on top of it.
+  // tabH is the part inside the viewport; the map's padding needs all of it.
+  const tabFull = innerWidth < 700 ? $("tabbar").offsetHeight : 0;
+  const tabH = Math.max(0, tabFull - gap);
   document.documentElement.style.setProperty("--tab-h", tabH + "px");
-  const h = (docked ? open.offsetHeight : 0) + tabH;
+  const sheetH = docked ? open.offsetHeight : 0, h = sheetH + tabH;
   // Wider screens: the sheet is a side panel on the left
   // (layout box, not getBoundingClientRect: the slide-in animation would skew it; zoom scales both)
   const z = +getComputedStyle(document.documentElement).getPropertyValue("--ui-zoom") || 1;
@@ -422,8 +436,8 @@ function liftButtons() {
   document.documentElement.style.setProperty("--sheet-h", h + "px");
   document.documentElement.style.setProperty("--sheet-w", w + "px");
   // Keep the map's center in the visible area beside or above the sheet (the rules panel reads it)
-  const p = map.getPadding();
-  if (p.bottom !== h || p.left !== w) map.setPadding({ top: 0, left: w, right: 0, bottom: h });
+  const p = map.getPadding(), pb = sheetH + (tabFull ? tabFull : gap);
+  if (p.bottom !== pb || p.left !== w) map.setPadding({ top: 0, left: w, right: 0, bottom: pb });
   if (typeof markTab === "function") markTab(open);
 }
 addEventListener("resize", liftButtons);
